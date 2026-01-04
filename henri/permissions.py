@@ -16,6 +16,9 @@ class PermissionManager:
     # Tools that have been permanently allowed for this session
     allowed_tools: set[str] = field(default_factory=set)
 
+    # Exact bash commands that have been allowed
+    allowed_bash_commands: set[str] = field(default_factory=set)
+
     # If True, allow all tools without prompting
     allow_all: bool = False
 
@@ -29,7 +32,12 @@ class PermissionManager:
         if self.allow_all:
             return True
 
-        if tool.name in self.allowed_tools:
+        # For bash, check exact command match
+        if tool.name == "bash":
+            command = call.args.get("command", "")
+            if command in self.allowed_bash_commands:
+                return True
+        elif tool.name in self.allowed_tools:
             return True
 
         return self._prompt_user(tool, call)
@@ -56,8 +64,13 @@ class PermissionManager:
             elif response in ("n", "no"):
                 return False
             elif response in ("a", "always"):
-                self.allowed_tools.add(tool.name)
-                self.console.print(f"[dim]Will allow '{tool.name}' for this session[/dim]")
+                if tool.name == "bash":
+                    command = call.args.get("command", "")
+                    self.allowed_bash_commands.add(command)
+                    self.console.print(f"[dim]Will allow this exact bash command for this session[/dim]")
+                else:
+                    self.allowed_tools.add(tool.name)
+                    self.console.print(f"[dim]Will allow '{tool.name}' for this session[/dim]")
                 return True
             elif response == "A":  # Capital A for allow all
                 self.allow_all = True
