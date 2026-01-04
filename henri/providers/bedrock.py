@@ -10,6 +10,7 @@ import boto3
 if TYPE_CHECKING:
     from henri.tools.base import Tool
 
+from henri.config import DEFAULT_MODEL, DEFAULT_REGION
 from henri.messages import Message, ToolCall
 
 
@@ -26,8 +27,8 @@ class BedrockProvider:
 
     def __init__(
         self,
-        model_id: str = "us.anthropic.claude-sonnet-4-20250514-v1:0",
-        region: str = "us-east-1",
+        model_id: str = DEFAULT_MODEL,
+        region: str = DEFAULT_REGION,
     ):
         self.model_id = model_id
         self.client = boto3.client("bedrock-runtime", region_name=region)

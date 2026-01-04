@@ -118,10 +118,11 @@ class Agent:
         self.console.print(Panel(display, border_style="dim", padding=(0, 1)))
 
 
-async def run_agent():
+async def run_agent(model: str, region: str):
     """Run the interactive agent loop."""
     console = Console()
-    agent = Agent(console=console)
+    provider = BedrockProvider(model_id=model, region=region)
+    agent = Agent(provider=provider, console=console)
 
     console.print(Panel(
         "[bold]Henri[/bold] - A pedagogical Claude Code clone\n"
