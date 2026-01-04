@@ -12,8 +12,8 @@ def main():
     )
     parser.add_argument(
         "--model",
-        default="anthropic.claude-sonnet-4-20250514-v1:0",
-        help="Bedrock model ID to use",
+        default="us.anthropic.claude-sonnet-4-20250514-v1:0",
+        help="Bedrock model ID or inference profile ARN",
     )
     parser.add_argument(
         "--region",
