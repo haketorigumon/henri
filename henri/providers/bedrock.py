@@ -101,6 +101,8 @@ class BedrockProvider(Provider):
                     current_tool_id = start["toolUse"]["toolUseId"]
                     current_tool_name = start["toolUse"]["name"]
                     current_tool_input = ""
+                    # Signal that tool use is starting (for spinner)
+                    yield StreamEvent(tool_use_started=True)
 
             elif "contentBlockDelta" in event:
                 delta = event["contentBlockDelta"]["delta"]

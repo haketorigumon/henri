@@ -113,16 +113,18 @@ class GoogleProvider(Provider):
             config=config,
         )
         async for chunk in response:
-            # Handle text content
-            if chunk.text:
-                yield StreamEvent(text=chunk.text)
-
-            # Handle function calls
+            # Handle content parts directly to avoid warning about mixed content types
             if chunk.candidates:
                 for candidate in chunk.candidates:
                     if candidate.content and candidate.content.parts:
                         for part in candidate.content.parts:
-                            if part.function_call:
+                            # Handle text content
+                            if part.text:
+                                yield StreamEvent(text=part.text)
+                            # Handle function calls
+                            elif part.function_call:
+                                if not tool_calls:
+                                    yield StreamEvent(tool_use_started=True)
                                 fc = part.function_call
                                 tool_calls.append(ToolCall(
                                     id=fc.name,  # Google uses name as ID

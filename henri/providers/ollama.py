@@ -101,6 +101,8 @@ class OllamaProvider(Provider):
 
             # Handle tool calls
             if tc_list := message.get("tool_calls"):
+                if not tool_calls:
+                    yield StreamEvent(tool_use_started=True)
                 for tc in tc_list:
                     fn = tc.get("function", {})
                     tool_calls.append(ToolCall(

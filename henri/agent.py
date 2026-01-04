@@ -1,12 +1,10 @@
 """Main agent loop for Henri."""
 
-import asyncio
-
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
 from rich.console import Console
-from rich.markdown import Markdown
 from rich.panel import Panel
+from rich.status import Status
 
 from henri.messages import Message, ToolResult
 from henri.permissions import PermissionManager
@@ -37,6 +35,20 @@ class Agent:
         self.console = console or Console()
         self.permissions = PermissionManager(console=self.console)
         self.messages: list[Message] = []
+        self._status: Status | None = None
+
+    def _show_status(self, message: str) -> None:
+        """Show a spinner with the given message."""
+        if self._status:
+            self._status.stop()
+        self._status = Status(message, console=self.console, spinner="dots")
+        self._status.start()
+
+    def _hide_status(self) -> None:
+        """Hide the current spinner if any."""
+        if self._status:
+            self._status.stop()
+            self._status = None
 
     async def chat(self, user_input: str) -> None:
         """Process a user message and stream the response."""
@@ -48,23 +60,28 @@ class Agent:
             tool_calls = []
             stop_reason = None
 
+            # Show spinner while waiting for response
+            self._show_status("Answering...")
+
             async for event in self.provider.stream(
                 self.messages,
                 self.tools,
                 system=SYSTEM_PROMPT,
             ):
                 if event.text:
-                    # Stream text to console
+                    self._hide_status()
                     self.console.print(event.text, end="")
                     response_text += event.text
 
-                if event.tool_calls:
-                    tool_calls = event.tool_calls
+                if event.tool_use_started or event.tool_calls:
+                    if event.tool_calls:
+                        tool_calls = event.tool_calls
+                    self._show_status("Working...")
 
                 if event.stop_reason:
                     stop_reason = event.stop_reason
 
-            # End the streamed line if we printed any text
+            self._hide_status()
             if response_text:
                 self.console.print()
 
@@ -76,6 +93,7 @@ class Agent:
                 break
 
             # Execute tool calls
+            self._show_status("Working...")
             results = []
             for call in tool_calls:
                 tool = self.tools_by_name.get(call.name)
@@ -87,7 +105,8 @@ class Agent:
                     ))
                     continue
 
-                # Check permissions
+                # Check permissions (hide spinner for potential dialog)
+                self._hide_status()
                 if not self.permissions.check(tool, call):
                     results.append(ToolResult(
                         tool_call_id=call.id,
@@ -96,9 +115,14 @@ class Agent:
                     ))
                     continue
 
-                # Execute the tool
+                # Show execution info
                 self._show_tool_execution(tool, call)
+
+                # Execute tool
+                self._show_status("Executing...")
                 result = tool.execute(**call.args)
+                self._hide_status()
+
                 results.append(ToolResult(tool_call_id=call.id, content=result))
                 self._show_tool_result(result)
 

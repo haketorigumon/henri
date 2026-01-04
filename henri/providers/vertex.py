@@ -102,6 +102,7 @@ class VertexProvider(Provider):
                         current_tool_id = event.content_block.id
                         current_tool_name = event.content_block.name
                         current_tool_input = ""
+                        yield StreamEvent(tool_use_started=True)
 
                 elif event.type == "content_block_delta":
                     if event.delta.type == "text_delta":

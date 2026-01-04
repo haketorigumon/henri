@@ -17,6 +17,7 @@ class StreamEvent:
     text: str = ""
     tool_calls: list[ToolCall] | None = None
     stop_reason: str | None = None
+    tool_use_started: bool = False  # Signal that tool use is beginning
 
 
 class Provider(ABC):
