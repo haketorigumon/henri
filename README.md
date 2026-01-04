@@ -124,6 +124,8 @@ Command-line options:
 henri --model anthropic.claude-sonnet-4-20250514-v1:0 --region us-east-1
 ```
 
+- [supported AWS models](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-profiles-support.html)
+
 ## License
 
 MIT
