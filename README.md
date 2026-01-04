@@ -24,7 +24,7 @@ pip install -e .
 # AWS Bedrock (default)
 henri
 
-# Google
+# Google (API & Vertex)
 henri --provider google
 
 # Ollama (local)
@@ -77,9 +77,9 @@ henri/
 ├── messages.py      # Core data types (Message, ToolCall, ToolResult)
 ├── providers/
 │   ├── base.py      # Provider abstract base class
-│   ├── bedrock.py   # AWS Bedrock (Claude)
-│   ├── google.py    # Google Cloud (Gemini)
-│   └── ollama.py    # Ollama (local)
+│   ├── bedrock.py   # AWS Bedrock
+│   ├── google.py    # Google (API & Vertex)
+│   └── ollama.py    # Ollama
 ├── tools/
 │   └── base.py      # Tool base class + built-in tools
 ├── permissions.py   # Permission management
