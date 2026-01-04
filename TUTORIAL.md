@@ -304,11 +304,20 @@ async def chat(self, user_input: str) -> None:
         self.messages.append(Message.tool_result(results))
 ```
 
-**Key insight**: The loop continues until the LLM stops requesting tools. Each iteration:
-1. Sends full conversation history to LLM
-2. LLM responds with text and/or tool requests
-3. We execute tools and append results
-4. Repeat
+### How the Loop Terminates
+
+The loop runs until the LLM responds without any tool calls. Each iteration:
+
+1. Send full conversation history to LLM
+2. LLM streams back text and/or tool calls
+3. If tool calls: execute them, append results, loop again
+4. If no tool calls: break out, we're done
+
+**Key insight**: The entire agent is just a `while True` loop. Stream a response, execute any tool calls, repeat. That's it.
+
+### Note: `stop_reason`
+
+`StreamEvent` also has a `stop_reason` field (`end_turn`, `tool_use`, or `max_tokens`). Henri doesn't use it yet, but could in the future (e.g., to warn users when a response is truncated).
 
 ## Part 6: Adding a New Tool
 
