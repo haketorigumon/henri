@@ -2,6 +2,8 @@
 
 import asyncio
 
+from prompt_toolkit import PromptSession
+from prompt_toolkit.history import FileHistory
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
@@ -144,10 +146,13 @@ async def run_agent(
         border_style="blue",
     ))
 
+    # Session with history for up/down arrow recall
+    session = PromptSession(history=FileHistory(".henri_history"))
+
     while True:
         try:
             console.print()
-            user_input = console.input("[bold blue]>[/bold blue] ")
+            user_input = await session.prompt_async("> ")
             if not user_input.strip():
                 continue
             await agent.chat(user_input)

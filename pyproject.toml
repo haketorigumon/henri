@@ -8,10 +8,11 @@ version = "0.1.0"
 description = "A pedagogical Claude Code clone"
 requires-python = ">=3.11"
 dependencies = [
-    "boto3>=1.34.0",       # AWS SDK for Bedrock
-    "google-genai>=1.0.0", # Google Gemini API
-    "ollama>=0.4.0",       # Ollama local models
-    "rich>=13.0.0",        # Terminal formatting
+    "boto3>=1.34.0",         # AWS SDK for Bedrock
+    "google-genai>=1.0.0",   # Google Gemini API
+    "ollama>=0.4.0",         # Ollama local models
+    "prompt-toolkit>=3.0.0", # Readline-style input
+    "rich>=13.0.0",          # Terminal formatting
 ]
 
 [project.scripts]
