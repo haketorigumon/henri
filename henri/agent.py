@@ -1,5 +1,7 @@
 """Main agent loop for Henri."""
 
+import asyncio
+
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
 from rich.console import Console
@@ -36,6 +38,24 @@ class Agent:
         self.permissions = PermissionManager(console=self.console)
         self.messages: list[Message] = []
         self._status: Status | None = None
+        self._pondering_task: asyncio.Task | None = None
+
+    def _cancel_pondering(self) -> None:
+        """Cancel any pending pondering status."""
+        if self._pondering_task and not self._pondering_task.done():
+            self._pondering_task.cancel()
+            self._pondering_task = None
+
+    def _schedule_pondering(self, delay: float = 0.5) -> None:
+        """Schedule showing 'Pondering...' after a delay."""
+        self._cancel_pondering()
+
+        async def show_pondering():
+            await asyncio.sleep(delay)
+            self.console.print()  # newline so status doesn't overwrite text
+            self._show_status("Pondering...")
+
+        self._pondering_task = asyncio.create_task(show_pondering())
 
     def _show_status(self, message: str) -> None:
         """Show a spinner with the given message."""
@@ -69,11 +89,15 @@ class Agent:
                 system=SYSTEM_PROMPT,
             ):
                 if event.text:
+                    self._cancel_pondering()
                     self._hide_status()
                     self.console.print(event.text, end="")
                     response_text += event.text
+                    # Schedule "Pondering..." to show after a pause
+                    self._schedule_pondering()
 
                 if event.tool_use_started or event.tool_calls:
+                    self._cancel_pondering()
                     if event.tool_calls:
                         tool_calls = event.tool_calls
                     self._show_status("Working...")
@@ -81,6 +105,7 @@ class Agent:
                 if event.stop_reason:
                     stop_reason = event.stop_reason
 
+            self._cancel_pondering()
             self._hide_status()
             if response_text:
                 self.console.print()
