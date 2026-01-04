@@ -14,3 +14,7 @@ DEFAULT_GOOGLE_LOCATION = "us-central1"
 # Ollama defaults
 DEFAULT_OLLAMA_MODEL = "qwen3-coder:30b"
 DEFAULT_OLLAMA_HOST = "http://localhost:11434"
+
+# Vertex AI defaults (for Claude models)
+DEFAULT_VERTEX_MODEL = "claude-sonnet-4-5"
+DEFAULT_VERTEX_REGION = "us-east5"

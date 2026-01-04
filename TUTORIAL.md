@@ -64,7 +64,7 @@ class Message:
 
 ## Part 2: The Provider Abstraction (`providers/base.py`)
 
-The provider abstracts LLM communication. Henri supports multiple providers (Bedrock, Google, Ollama) through a common interface.
+The provider abstracts LLM communication. Henri supports multiple providers (Bedrock, Google, Vertex, Ollama) through a common interface.
 
 ### The Provider Protocol
 
@@ -105,6 +105,7 @@ Providers are registered in `providers/__init__.py`:
 PROVIDERS: dict[str, type[Provider]] = {
     "bedrock": BedrockProvider,
     "google": GoogleProvider,
+    "vertex": VertexProvider,
     "ollama": OllamaProvider,
 }
 

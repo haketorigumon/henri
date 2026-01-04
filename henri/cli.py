@@ -7,10 +7,10 @@ from henri.agent import run_agent
 from henri.config import (
     DEFAULT_PROVIDER,
     DEFAULT_BEDROCK_MODEL,
-    DEFAULT_BEDROCK_REGION,
     DEFAULT_GOOGLE_MODEL,
     DEFAULT_OLLAMA_MODEL,
     DEFAULT_OLLAMA_HOST,
+    DEFAULT_VERTEX_MODEL,
 )
 from henri.providers import PROVIDERS
 
@@ -31,8 +31,7 @@ def main():
     )
     parser.add_argument(
         "--region",
-        default=DEFAULT_BEDROCK_REGION,
-        help="AWS region for Bedrock provider",
+        help="Region (Bedrock: AWS region, Vertex: GCP region)",
     )
     parser.add_argument(
         "--host",
@@ -47,6 +46,7 @@ def main():
             "bedrock": DEFAULT_BEDROCK_MODEL,
             "google": DEFAULT_GOOGLE_MODEL,
             "ollama": DEFAULT_OLLAMA_MODEL,
+            "vertex": DEFAULT_VERTEX_MODEL,
         }[args.provider]
 
     asyncio.run(run_agent(

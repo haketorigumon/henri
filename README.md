@@ -6,7 +6,7 @@ Henri is a minimal but complete AI coding assistant that demonstrates the core a
 
 ## Features
 
-- **Multiple LLM providers** - AWS Bedrock, Google Cloud, Ollama (local)
+- **Multiple LLM providers** - AWS Bedrock, Google Gemini, Vertex AI, Ollama (local)
 - **Streaming responses** - Real-time token streaming
 - **Tool system** - bash, file read/write capabilities
 - **Permission management** - Prompts before potentially dangerous operations
@@ -24,8 +24,11 @@ pip install -e .
 # AWS Bedrock (default)
 henri
 
-# Google (API & Vertex)
+# Google Gemini
 henri --provider google
+
+# Vertex AI
+henri --provider vertex
 
 # Ollama (local)
 henri --provider ollama
@@ -37,9 +40,12 @@ henri --provider ollama
 - Configure AWS credentials (`aws configure` or environment variables)
 - Ensure access to Claude models in your region
 
-**Google**:
+**Google Gemini**:
 - Set `GOOGLE_API_KEY` for Google AI API, or
 - Set `GOOGLE_CLOUD_PROJECT` for Vertex AI
+
+**Vertex AI**:
+- Set `GOOGLE_CLOUD_PROJECT`
 
 **Ollama**:
 - Install and run [Ollama](https://ollama.ai) locally
@@ -78,7 +84,8 @@ henri/
 ├── providers/
 │   ├── base.py      # Provider abstract base class
 │   ├── bedrock.py   # AWS Bedrock
-│   ├── google.py    # Google (API & Vertex)
+│   ├── google.py    # Google Gemini
+│   ├── vertex.py    # Vertex AI
 │   └── ollama.py    # Ollama
 ├── tools/
 │   └── base.py      # Tool base class + built-in tools
@@ -140,13 +147,14 @@ Then register it in `providers/__init__.py`.
 
 ```bash
 # Provider selection
-henri --provider bedrock|google|ollama
+henri --provider bedrock|google|vertex|ollama
 
 # Model override
 henri --model <model-id>
 
 # Provider-specific options
 henri --region us-east-1             # AWS Bedrock
+henri --region us-east5              # Vertex AI
 henri --host http://localhost:11434  # Ollama
 ```
 

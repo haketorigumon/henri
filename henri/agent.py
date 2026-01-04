@@ -133,6 +133,8 @@ async def run_agent(
     provider_kwargs = {"model_id": model}
     if provider == "bedrock" and region:
         provider_kwargs["region"] = region
+    elif provider == "vertex" and region:
+        provider_kwargs["region"] = region
     elif provider == "ollama" and host:
         provider_kwargs["host"] = host
 

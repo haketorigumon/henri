@@ -6,12 +6,14 @@ from .base import Provider, StreamEvent
 from .bedrock import BedrockProvider
 from .google import GoogleProvider
 from .ollama import OllamaProvider
+from .vertex import VertexProvider
 
 # Registry of available providers
 PROVIDERS: dict[str, type[Provider]] = {
     "bedrock": BedrockProvider,
     "google": GoogleProvider,
     "ollama": OllamaProvider,
+    "vertex": VertexProvider,
 }
 
 
@@ -41,6 +43,7 @@ __all__ = [
     "BedrockProvider",
     "GoogleProvider",
     "OllamaProvider",
+    "VertexProvider",
     "PROVIDERS",
     "create_provider",
 ]
