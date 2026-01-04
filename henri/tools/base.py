@@ -120,6 +120,74 @@ class WriteFileTool(Tool):
             return f"[error: {e}]"
 
 
+class EditFileTool(Tool):
+    """Edit a file by replacing exact text."""
+
+    name = "edit_file"
+    description = (
+        "Replace exact text in a file. The old_string must be unique in the file "
+        "(or use replace_all=true to replace all occurrences). "
+        "Include enough context in old_string to make it unique."
+    )
+    parameters = {
+        "type": "object",
+        "properties": {
+            "path": {
+                "type": "string",
+                "description": "Path to the file to edit",
+            },
+            "old_string": {
+                "type": "string",
+                "description": "The exact text to find and replace",
+            },
+            "new_string": {
+                "type": "string",
+                "description": "The text to replace it with",
+            },
+            "replace_all": {
+                "type": "boolean",
+                "description": "Replace all occurrences instead of just the first",
+                "default": False,
+            },
+        },
+        "required": ["path", "old_string", "new_string"],
+    }
+    requires_permission = True
+
+    def execute(
+        self, path: str, old_string: str, new_string: str, replace_all: bool = False
+    ) -> str:
+        try:
+            p = Path(path).expanduser()
+            if not p.exists():
+                return f"[error: file not found: {path}]"
+            if not p.is_file():
+                return f"[error: not a file: {path}]"
+
+            content = p.read_text()
+            count = content.count(old_string)
+
+            if count == 0:
+                return f"[error: old_string not found in {path}]"
+            if count > 1 and not replace_all:
+                return (
+                    f"[error: old_string appears {count} times in {path}. "
+                    f"Use replace_all=true or provide more context to make it unique.]"
+                )
+
+            if replace_all:
+                new_content = content.replace(old_string, new_string)
+                replacements = count
+            else:
+                new_content = content.replace(old_string, new_string, 1)
+                replacements = 1
+
+            p.write_text(new_content)
+            return f"[replaced {replacements} occurrence(s) in {path}]"
+        except Exception as e:
+            return f"[error: {e}]"
+
+
 def get_default_tools() -> list[Tool]:
     """Return the default set of tools."""
-    return [BashTool(), ReadFileTool(), WriteFileTool()]
+    return [BashTool(), ReadFileTool(), WriteFileTool(), EditFileTool()]
