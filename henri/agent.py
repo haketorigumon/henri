@@ -8,7 +8,7 @@ from rich.panel import Panel
 
 from henri.messages import Message, ToolResult
 from henri.permissions import PermissionManager
-from henri.providers.bedrock import BedrockProvider
+from henri.providers import Provider, create_provider
 from henri.tools.base import Tool, get_default_tools
 
 
@@ -25,11 +25,11 @@ class Agent:
 
     def __init__(
         self,
-        provider: BedrockProvider | None = None,
+        provider: Provider,
         tools: list[Tool] | None = None,
         console: Console | None = None,
     ):
-        self.provider = provider or BedrockProvider()
+        self.provider = provider
         self.tools = tools or get_default_tools()
         self.tools_by_name = {t.name: t for t in self.tools}
         self.console = console or Console()
@@ -118,14 +118,28 @@ class Agent:
         self.console.print(Panel(display, border_style="dim", padding=(0, 1)))
 
 
-async def run_agent(model: str, region: str):
+async def run_agent(
+    provider: str,
+    model: str,
+    region: str | None = None,
+    host: str | None = None,
+):
     """Run the interactive agent loop."""
     console = Console()
-    provider = BedrockProvider(model_id=model, region=region)
-    agent = Agent(provider=provider, console=console)
+
+    # Build provider-specific kwargs
+    provider_kwargs = {"model_id": model}
+    if provider == "bedrock" and region:
+        provider_kwargs["region"] = region
+    elif provider == "ollama" and host:
+        provider_kwargs["host"] = host
+
+    llm = create_provider(provider, **provider_kwargs)
+    agent = Agent(provider=llm, console=console)
 
     console.print(Panel(
-        "[bold]Henri[/bold] - A pedagogical Claude Code clone\n"
+        f"[bold]Henri[/bold] - A pedagogical Claude Code clone\n"
+        f"Provider: {provider} | Model: {model}\n"
         "Type your message and press Enter. Use Ctrl+C to exit.",
         border_style="blue",
     ))

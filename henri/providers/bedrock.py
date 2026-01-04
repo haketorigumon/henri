@@ -2,7 +2,6 @@
 
 import json
 from collections.abc import AsyncIterator
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import boto3
@@ -10,25 +9,20 @@ import boto3
 if TYPE_CHECKING:
     from henri.tools.base import Tool
 
-from henri.config import DEFAULT_MODEL, DEFAULT_REGION
+from henri.config import DEFAULT_BEDROCK_MODEL, DEFAULT_BEDROCK_REGION
 from henri.messages import Message, ToolCall
+from henri.providers.base import Provider, StreamEvent
 
 
-@dataclass
-class StreamEvent:
-    """An event from the streaming response."""
-    text: str = ""
-    tool_calls: list[ToolCall] | None = None
-    stop_reason: str | None = None
-
-
-class BedrockProvider:
+class BedrockProvider(Provider):
     """AWS Bedrock provider using the Converse API."""
+
+    name = "bedrock"
 
     def __init__(
         self,
-        model_id: str = DEFAULT_MODEL,
-        region: str = DEFAULT_REGION,
+        model_id: str = DEFAULT_BEDROCK_MODEL,
+        region: str = DEFAULT_BEDROCK_REGION,
     ):
         self.model_id = model_id
         self.client = boto3.client("bedrock-runtime", region_name=region)

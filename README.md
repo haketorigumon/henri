@@ -6,10 +6,11 @@ Henri is a minimal but complete AI coding assistant that demonstrates the core a
 
 ## Features
 
-- **Streaming responses** from Claude via AWS Bedrock
-- **Tool system** with bash, file read/write capabilities
-- **Permission management** - prompts before potentially dangerous operations
-- **Clean architecture** - easy to understand and extend
+- **Multiple LLM providers** - AWS Bedrock, Google Cloud, Ollama (local)
+- **Streaming responses** - Real-time token streaming
+- **Tool system** - bash, file read/write capabilities
+- **Permission management** - Prompts before potentially dangerous operations
+- **Clean architecture** - Easy to understand and extend
 
 ## Installation
 
@@ -20,20 +21,29 @@ pip install -e .
 ## Usage
 
 ```bash
+# AWS Bedrock (default)
 henri
+
+# Google
+henri --provider google
+
+# Ollama (local)
+henri --provider ollama
 ```
 
-Or:
+### Provider Setup
 
-```bash
-python -m henri.cli
-```
+**AWS Bedrock** (default):
+- Configure AWS credentials (`aws configure` or environment variables)
+- Ensure access to Claude models in your region
 
-### Requirements
+**Google**:
+- Set `GOOGLE_API_KEY` for Google AI API, or
+- Set `GOOGLE_CLOUD_PROJECT` for Vertex AI
 
-- Python 3.11+
-- AWS credentials configured with Bedrock access
-- Access to Claude models in your AWS region
+**Ollama**:
+- Install and run [Ollama](https://ollama.ai) locally
+- Pull a model: `ollama pull qwen3-coder:30b`
 
 ### Example Session
 
@@ -66,7 +76,10 @@ When Henri wants to execute a tool that requires permission (like `bash` or `wri
 henri/
 ├── messages.py      # Core data types (Message, ToolCall, ToolResult)
 ├── providers/
-│   └── bedrock.py   # AWS Bedrock provider with streaming
+│   ├── base.py      # Provider abstract base class
+│   ├── bedrock.py   # AWS Bedrock (Claude)
+│   ├── google.py    # Google Cloud (Gemini)
+│   └── ollama.py    # Ollama (local)
 ├── tools/
 │   └── base.py      # Tool base class + built-in tools
 ├── permissions.py   # Permission management
@@ -102,30 +115,46 @@ Then add it to the tools list in `agent.py` or pass it when creating the Agent.
 
 ### Adding New Providers
 
-Implement a provider with a `stream()` method that yields `StreamEvent` objects:
+Subclass `Provider` and implement the `stream()` method:
 
 ```python
-async def stream(
-    self,
-    messages: list[Message],
-    tools: list[Tool],
-    system: str = "",
-) -> AsyncIterator[StreamEvent]:
-    # Your implementation
-    yield StreamEvent(text="Hello")
-    yield StreamEvent(stop_reason="end_turn")
+from henri.providers.base import Provider, StreamEvent
+
+class MyProvider(Provider):
+    name = "my_provider"
+
+    async def stream(
+        self,
+        messages: list[Message],
+        tools: list[Tool],
+        system: str = "",
+    ) -> AsyncIterator[StreamEvent]:
+        # Your implementation
+        yield StreamEvent(text="Hello")
+        yield StreamEvent(stop_reason="end_turn")
 ```
+
+Then register it in `providers/__init__.py`.
 
 ## Configuration
 
-Command-line options:
-
 ```bash
-henri --model us.anthropic.claude-sonnet-4-5-20250929-v1:0
- --region us-east-1
+# Provider selection
+henri --provider bedrock|google|ollama
+
+# Model override
+henri --model <model-id>
+
+# Provider-specific options
+henri --region us-east-1             # AWS Bedrock
+henri --host http://localhost:11434  # Ollama
 ```
 
-- [supported AWS models](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-profiles-support.html)
+### Links
+
+- [Supported AWS Bedrock models](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-profiles-support.html)
+- [Google Cloud Model Garden](https://console.cloud.google.com/vertex-ai/model-garden)
+- [Ollama model library](https://ollama.ai/library)
 
 ## License
 

@@ -4,7 +4,15 @@ import argparse
 import asyncio
 
 from henri.agent import run_agent
-from henri.config import DEFAULT_MODEL, DEFAULT_REGION
+from henri.config import (
+    DEFAULT_PROVIDER,
+    DEFAULT_BEDROCK_MODEL,
+    DEFAULT_BEDROCK_REGION,
+    DEFAULT_GOOGLE_MODEL,
+    DEFAULT_OLLAMA_MODEL,
+    DEFAULT_OLLAMA_HOST,
+)
+from henri.providers import PROVIDERS
 
 
 def main():
@@ -12,17 +20,41 @@ def main():
         description="Henri - A pedagogical Claude Code clone",
     )
     parser.add_argument(
-        "--model",
-        default=DEFAULT_MODEL,
-        help="Bedrock model ID or inference profile ARN",
+        "--provider", "-p",
+        choices=list(PROVIDERS.keys()),
+        default=DEFAULT_PROVIDER,
+        help=f"LLM provider (default: {DEFAULT_PROVIDER})",
+    )
+    parser.add_argument(
+        "--model", "-m",
+        help="Model ID (provider-specific, uses default if not set)",
     )
     parser.add_argument(
         "--region",
-        default=DEFAULT_REGION,
-        help="AWS region for Bedrock",
+        default=DEFAULT_BEDROCK_REGION,
+        help="AWS region for Bedrock provider",
+    )
+    parser.add_argument(
+        "--host",
+        default=DEFAULT_OLLAMA_HOST,
+        help="Host URL for Ollama provider",
     )
     args = parser.parse_args()
-    asyncio.run(run_agent(model=args.model, region=args.region))
+
+    # Determine model based on provider if not specified
+    if args.model is None:
+        args.model = {
+            "bedrock": DEFAULT_BEDROCK_MODEL,
+            "google": DEFAULT_GOOGLE_MODEL,
+            "ollama": DEFAULT_OLLAMA_MODEL,
+        }[args.provider]
+
+    asyncio.run(run_agent(
+        provider=args.provider,
+        model=args.model,
+        region=args.region,
+        host=args.host,
+    ))
 
 
 if __name__ == "__main__":
