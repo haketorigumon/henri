@@ -14,13 +14,50 @@ from henri.providers import Provider, create_provider
 from henri.tools.base import Tool, get_default_tools
 
 
-def build_system_prompt(tools: list[Tool]) -> str:
-    """Build system prompt with available tools."""
-    tool_lines = "\n".join(f"- {t.name}: {t.description}" for t in tools)
+def summarize_tools_and_permissions(
+    tools: list[Tool],
+    auto_allow_cwd: set[str],
+    auto_allow: set[str],
+) -> tuple[list[str], list[str]]:
+    """Summarize tools and permissions. Returns (tool_lines, perm_lines)."""
+    tool_lines = [f"- {t.name}: {t.description}" for t in tools]
+
+    tool_names = {t.name for t in tools}
+    auto_all = tool_names & auto_allow
+    auto_cwd = (tool_names & auto_allow_cwd) - auto_all
+    need_perm = tool_names - auto_cwd - auto_all
+
+    perm_lines = []
+    if auto_all:
+        perm_lines.append(f"Auto-allow: {', '.join(sorted(auto_all))}")
+    if auto_cwd:
+        perm_lines.append(f"Auto-allow in cwd: {', '.join(sorted(auto_cwd))}")
+    if need_perm:
+        perm_lines.append(f"Require permission: {', '.join(sorted(need_perm))}")
+    if not perm_lines:
+        perm_lines.append("All tools require permission.")
+
+    return tool_lines, perm_lines
+
+
+def build_system_prompt(
+    tools: list[Tool],
+    auto_allow_cwd: set[str] | None = None,
+    auto_allow: set[str] | None = None,
+) -> str:
+    """Build system prompt with available tools and permissions."""
+    tool_lines, perm_lines = summarize_tools_and_permissions(
+        tools, auto_allow_cwd or set(), auto_allow or set()
+    )
+    tools_section = "\n".join(tool_lines)
+    perms_section = "\n".join(perm_lines)
     return f"""You are Henri, a helpful coding assistant.
 
 You have access to these tools:
-{tool_lines}
+{tools_section}
+
+Permissions:
+{perms_section}
 
 Be concise and direct in your responses."""
 
@@ -40,7 +77,11 @@ class Agent:
         self.tools_by_name = {t.name: t for t in self.tools}
         self.console = console or Console()
         self.permissions = permissions or PermissionManager(console=self.console)
-        self.system_prompt = build_system_prompt(self.tools)
+        self.system_prompt = build_system_prompt(
+            self.tools,
+            auto_allow_cwd=self.permissions.auto_allow_cwd,
+            auto_allow=self.permissions.auto_allow,
+        )
         self.messages: list[Message] = []
         self._status: Status | None = None
         self._pondering_task: asyncio.Task | None = None
@@ -237,6 +278,17 @@ async def run_agent(
         "Type your message and press Enter. Use Ctrl+C to exit.",
         border_style="blue",
     ))
+
+    # Print tools and permissions summary
+    tool_lines, perm_lines = summarize_tools_and_permissions(tools, auto_allow_cwd, auto_allow)
+    console.print("\n[bold]Tools:[/bold]")
+    for line in tool_lines:
+        console.print(line)
+    console.print("\n[bold]Permissions:[/bold]")
+    for line in perm_lines:
+        console.print(f"  {line}")
+    if reject_prompts:
+        console.print("  [dim]Prompts: auto-denied[/dim]")
 
     # Session with history for up/down arrow recall
     session = PromptSession(history=FileHistory(".henri_history"))
