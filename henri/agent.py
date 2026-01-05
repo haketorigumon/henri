@@ -6,6 +6,7 @@ import sys
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
 from rich.console import Console
+from rich.markup import escape as rich_escape
 from rich.panel import Panel
 from rich.status import Status
 
@@ -208,11 +209,26 @@ class Agent:
 
     def _show_tool_execution(self, tool: Tool, call) -> None:
         """Display that a tool is being executed."""
-        args_short = ", ".join(f"{k}={v!r:.50}" for k, v in call.args.items())
-        self.console.print(f"\n[dim]▶ {tool.name}({args_short})[/dim]")
+        self.console.print(f"\n[dim]▶ {tool.name}[/dim]")
+        for k, v in call.args.items():
+            if isinstance(v, str) and "\n" in v:
+                # Multi-line: show up to 10 lines
+                lines = v.split("\n")
+                self.console.print(f"[dim]  {k}:[/dim]")
+                for line in lines[:10]:
+                    self.console.print(f"[dim]    {rich_escape(line)}[/dim]")
+                if len(lines) > 10:
+                    self.console.print(f"[dim]    ... ({len(lines) - 10} more lines)[/dim]")
+            else:
+                # Single value: show truncated repr
+                v_repr = repr(v)
+                if len(v_repr) > 80:
+                    v_repr = v_repr[:80] + "..."
+                self.console.print(f"[dim]  {k}: {v_repr}[/dim]")
 
     def _show_tool_result(self, result: str) -> None:
         """Display a tool result (truncated if long)."""
+        result = rich_escape(result)  # prevent [text] from being parsed as markup
         lines = result.split("\n")
         if len(lines) > 10:
             display = "\n".join(lines[:10]) + f"\n[dim]... ({len(lines) - 10} more lines)[/dim]"
