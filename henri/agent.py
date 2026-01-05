@@ -18,6 +18,7 @@ def summarize_tools_and_permissions(
     tools: list[Tool],
     auto_allow_cwd: set[str],
     auto_allow: set[str],
+    reject_prompts: bool = False,
 ) -> tuple[list[str], list[str]]:
     """Summarize tools and permissions. Returns (tool_lines, perm_lines)."""
     tool_lines = [f"- {t.name}: {t.description}" for t in tools]
@@ -36,6 +37,8 @@ def summarize_tools_and_permissions(
         perm_lines.append(f"Require permission: {', '.join(sorted(need_perm))}")
     if not perm_lines:
         perm_lines.append("All tools require permission.")
+    if reject_prompts:
+        perm_lines.append("Other prompts: auto-denied")
 
     return tool_lines, perm_lines
 
@@ -44,10 +47,11 @@ def build_system_prompt(
     tools: list[Tool],
     auto_allow_cwd: set[str] | None = None,
     auto_allow: set[str] | None = None,
+    reject_prompts: bool = False,
 ) -> str:
     """Build system prompt with available tools and permissions."""
     tool_lines, perm_lines = summarize_tools_and_permissions(
-        tools, auto_allow_cwd or set(), auto_allow or set()
+        tools, auto_allow_cwd or set(), auto_allow or set(), reject_prompts
     )
     tools_section = "\n".join(tool_lines)
     perms_section = "\n".join(perm_lines)
@@ -81,6 +85,7 @@ class Agent:
             self.tools,
             auto_allow_cwd=self.permissions.auto_allow_cwd,
             auto_allow=self.permissions.auto_allow,
+            reject_prompts=self.permissions.reject_prompts,
         )
         self.messages: list[Message] = []
         self._status: Status | None = None
@@ -280,15 +285,15 @@ async def run_agent(
     ))
 
     # Print tools and permissions summary
-    tool_lines, perm_lines = summarize_tools_and_permissions(tools, auto_allow_cwd, auto_allow)
+    tool_lines, perm_lines = summarize_tools_and_permissions(
+        tools, auto_allow_cwd, auto_allow, reject_prompts
+    )
     console.print("\n[bold]Tools:[/bold]")
     for line in tool_lines:
         console.print(line)
     console.print("\n[bold]Permissions:[/bold]")
     for line in perm_lines:
         console.print(f"  {line}")
-    if reject_prompts:
-        console.print("  [dim]Prompts: auto-denied[/dim]")
 
     # Session with history for up/down arrow recall
     session = PromptSession(history=FileHistory(".henri_history"))
