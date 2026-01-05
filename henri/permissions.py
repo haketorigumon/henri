@@ -115,9 +115,17 @@ class PermissionManager:
             border_style="yellow",
         ))
 
+        # Build prompt with accurate "always" description
+        if tool.name == "bash":
+            always_desc = "this command"
+        elif self._is_path_based(tool.name):
+            always_desc = f"{tool.name} to this path"
+        else:
+            always_desc = tool.name
+
         while True:
             response = self.console.input(
-                "[dim](y)es / (n)o / (a)lways for this tool / allow (A)ll:[/dim] "
+                f"[dim](y)es / (n)o / (a)lways allow {always_desc} / (A)ll:[/dim] "
             ).strip().lower()
 
             if response in ("y", "yes"):
