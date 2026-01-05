@@ -14,16 +14,13 @@ from henri.providers import Provider, create_provider
 from henri.tools.base import Tool, get_default_tools
 
 
-SYSTEM_PROMPT = """You are Henri, a helpful coding assistant.
+def build_system_prompt(tools: list[Tool]) -> str:
+    """Build system prompt with available tools."""
+    tool_lines = "\n".join(f"- {t.name}: {t.description}" for t in tools)
+    return f"""You are Henri, a helpful coding assistant.
 
 You have access to these tools:
-- read_file: Read file contents
-- write_file: Create or overwrite a file
-- edit_file: Replace exact text in a file
-- grep: Search for patterns in files using ripgrep
-- glob: Find files matching a pattern (e.g., '**/*.py')
-- web_fetch: Fetch content from a URL
-- bash: Execute shell commands
+{tool_lines}
 
 Be concise and direct in your responses."""
 
@@ -36,12 +33,14 @@ class Agent:
         provider: Provider,
         tools: list[Tool] | None = None,
         console: Console | None = None,
+        permissions: PermissionManager | None = None,
     ):
         self.provider = provider
         self.tools = tools or get_default_tools()
         self.tools_by_name = {t.name: t for t in self.tools}
         self.console = console or Console()
-        self.permissions = PermissionManager(console=self.console)
+        self.permissions = permissions or PermissionManager(console=self.console)
+        self.system_prompt = build_system_prompt(self.tools)
         self.messages: list[Message] = []
         self._status: Status | None = None
         self._pondering_task: asyncio.Task | None = None
@@ -92,7 +91,7 @@ class Agent:
             async for event in self.provider.stream(
                 self.messages,
                 self.tools,
-                system=SYSTEM_PROMPT,
+                system=self.system_prompt,
             ):
                 if event.text:
                     self._cancel_pondering()
@@ -180,6 +179,7 @@ async def run_agent(
     model: str,
     region: str | None = None,
     host: str | None = None,
+    hooks: list | None = None,
 ):
     """Run the interactive agent loop."""
     console = Console()
@@ -194,7 +194,42 @@ async def run_agent(
         provider_kwargs["host"] = host
 
     llm = create_provider(provider, **provider_kwargs)
-    agent = Agent(provider=llm, console=console)
+
+    # Get tools from hooks (if any) and merge with defaults
+    tools = get_default_tools()
+    hooks = hooks or []
+    for hook in hooks:
+        if hasattr(hook, "TOOLS"):
+            tools = tools + hook.TOOLS
+        if hasattr(hook, "REMOVE_TOOLS"):
+            remove = hook.REMOVE_TOOLS
+            tools = [t for t in tools if t.name not in remove]
+
+    # Build permission manager with hook overrides
+    from henri.permissions import DEFAULT_PATH_BASED, DEFAULT_AUTO_ALLOW_CWD, DEFAULT_AUTO_ALLOW
+    path_based = set(DEFAULT_PATH_BASED)
+    auto_allow_cwd = set(DEFAULT_AUTO_ALLOW_CWD)
+    auto_allow = set(DEFAULT_AUTO_ALLOW)
+
+    reject_prompts = False
+    for hook in hooks:
+        if hasattr(hook, "PATH_BASED"):
+            path_based |= hook.PATH_BASED
+        if hasattr(hook, "AUTO_ALLOW_CWD"):
+            auto_allow_cwd |= hook.AUTO_ALLOW_CWD
+        if hasattr(hook, "AUTO_ALLOW"):
+            auto_allow |= hook.AUTO_ALLOW
+        if hasattr(hook, "REJECT_PROMPTS"):
+            reject_prompts = reject_prompts or hook.REJECT_PROMPTS
+
+    permissions = PermissionManager(
+        console=console,
+        path_based=path_based,
+        auto_allow_cwd=auto_allow_cwd,
+        auto_allow=auto_allow,
+        reject_prompts=reject_prompts,
+    )
+    agent = Agent(provider=llm, tools=tools, console=console, permissions=permissions)
 
     console.print(Panel(
         f"[bold]Henri[/bold] - A pedagogical Claude Code clone\n"
