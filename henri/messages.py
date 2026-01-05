@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 from typing import Literal
 
-Role = Literal["user", "assistant"]
+Role = Literal["user", "assistant", "tool"]
 
 
 @dataclass
@@ -40,4 +40,4 @@ class Message:
 
     @classmethod
     def tool_result(cls, results: list[ToolResult]) -> "Message":
-        return cls(role="user", tool_results=results)
+        return cls(role="tool", tool_results=results)

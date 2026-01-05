@@ -56,7 +56,8 @@ class VertexProvider(Provider):
                 "is_error": tr.is_error,
             })
 
-        return {"role": msg.role, "content": content}
+        role = "user" if msg.role == "tool" else msg.role
+        return {"role": role, "content": content}
 
     def _tools_to_anthropic(self, tools: list["Tool"]) -> list[dict]:
         """Convert tools to Anthropic's format."""

@@ -52,7 +52,8 @@ class BedrockProvider(Provider):
                 }
             })
 
-        return {"role": msg.role, "content": content}
+        role = "user" if msg.role == "tool" else msg.role
+        return {"role": role, "content": content}
 
     def _tools_to_bedrock(self, tools: list["Tool"]) -> list[dict]:
         """Convert tools to Bedrock's toolConfig format."""
