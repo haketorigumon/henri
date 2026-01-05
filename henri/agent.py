@@ -196,6 +196,17 @@ class Agent:
                 # Show execution info
                 self._show_tool_execution(tool, call)
 
+                # Validate required arguments
+                required = tool.parameters.get("required", [])
+                missing = [arg for arg in required if arg not in call.args]
+                if missing:
+                    results.append(ToolResult(
+                        tool_call_id=call.id,
+                        content=f"[error: missing required arguments: {', '.join(missing)}]",
+                        is_error=True,
+                    ))
+                    continue
+
                 # Execute tool
                 self._show_status("Executing...")
                 result = tool.execute(**call.args)
