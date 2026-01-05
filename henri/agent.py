@@ -276,6 +276,8 @@ async def run_agent(
     llm = create_provider(provider, **provider_kwargs)
 
     # Get tools from hooks (if any) and merge with defaults
+    # Hook modules can define: TOOLS, REMOVE_TOOLS, PATH_BASED,
+    # AUTO_ALLOW_CWD, AUTO_ALLOW, REJECT_PROMPTS
     tools = get_default_tools()
     hooks = hooks or []
     for hook in hooks:
