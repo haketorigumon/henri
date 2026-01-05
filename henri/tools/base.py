@@ -1,11 +1,11 @@
 """Base tool class and built-in tools."""
 
-import re
 import subprocess
 import urllib.request
 from abc import ABC, abstractmethod
-from html.parser import HTMLParser
 from pathlib import Path
+
+from bs4 import BeautifulSoup
 
 
 class Tool(ABC):
@@ -300,32 +300,6 @@ class GlobTool(Tool):
             return f"[error: {e}]"
 
 
-class _HTMLTextExtractor(HTMLParser):
-    """Simple HTML to text converter."""
-
-    def __init__(self):
-        super().__init__()
-        self.text = []
-        self._skip = False
-
-    def handle_starttag(self, tag, attrs):
-        if tag in ("script", "style", "head"):
-            self._skip = True
-
-    def handle_endtag(self, tag):
-        if tag in ("script", "style", "head"):
-            self._skip = False
-        if tag in ("p", "br", "div", "h1", "h2", "h3", "h4", "h5", "h6", "li"):
-            self.text.append("\n")
-
-    def handle_data(self, data):
-        if not self._skip:
-            self.text.append(data)
-
-    def get_text(self):
-        return re.sub(r"\n{3,}", "\n\n", "".join(self.text).strip())
-
-
 class WebFetchTool(Tool):
     """Fetch content from a URL."""
 
@@ -359,9 +333,10 @@ class WebFetchTool(Tool):
 
                 # Convert HTML to text
                 if "html" in content_type.lower():
-                    parser = _HTMLTextExtractor()
-                    parser.feed(content)
-                    content = parser.get_text()
+                    soup = BeautifulSoup(content, "html.parser")
+                    for tag in soup(["script", "style", "head"]):
+                        tag.decompose()
+                    content = soup.get_text(separator="\n", strip=True)
 
                 if len(content) > 50_000:
                     content = content[:50_000] + "\n[truncated...]"
