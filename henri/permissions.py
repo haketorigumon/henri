@@ -35,8 +35,8 @@ class PermissionManager:
     # Session state: exact bash commands that have been allowed
     allowed_bash_commands: set[str] = field(default_factory=set)
 
-    # Session state: paths that have been allowed for path-based tools
-    allowed_paths: set[str] = field(default_factory=set)
+    # Session state: paths that have been allowed, per tool
+    allowed_paths: dict[str, set[str]] = field(default_factory=dict)
 
     # Session state: allow all tools without prompting
     allow_all: bool = False
@@ -88,8 +88,8 @@ class PermissionManager:
         elif self._is_path_based(tool.name):
             path = call.args.get("path", ".")
             resolved = str(Path(path).resolve())
-            # Check if path already allowed
-            if resolved in self.allowed_paths:
+            # Check if path already allowed for this tool
+            if resolved in self.allowed_paths.get(tool.name, set()):
                 return True
             # Auto-allow within cwd only for certain tools
             if self._is_auto_allow_cwd(tool.name) and self._is_path_within_cwd(path):
@@ -132,8 +132,10 @@ class PermissionManager:
                 elif self._is_path_based(tool.name):
                     path = call.args.get("path", ".")
                     resolved = str(Path(path).resolve())
-                    self.allowed_paths.add(resolved)
-                    self.console.print(f"[dim]Will allow access to '{resolved}' for this session[/dim]")
+                    if tool.name not in self.allowed_paths:
+                        self.allowed_paths[tool.name] = set()
+                    self.allowed_paths[tool.name].add(resolved)
+                    self.console.print(f"[dim]Will allow {tool.name} access to '{resolved}' for this session[/dim]")
                 else:
                     self.allowed_tools.add(tool.name)
                     self.console.print(f"[dim]Will allow '{tool.name}' for this session[/dim]")
