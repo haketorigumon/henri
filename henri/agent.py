@@ -209,22 +209,35 @@ class Agent:
 
     def _show_tool_execution(self, tool: Tool, call) -> None:
         """Display that a tool is being executed."""
-        self.console.print(f"\n[dim]▶ {tool.name}[/dim]")
+        # Build header with simple args
+        simple_args = []
+        multi_args = {}
         for k, v in call.args.items():
             if isinstance(v, str) and "\n" in v:
-                # Multi-line: show up to 10 lines
-                lines = v.split("\n")
-                self.console.print(f"[dim]  {k}:[/dim]")
-                for line in lines[:10]:
-                    self.console.print(f"[dim]    {rich_escape(line)}[/dim]")
-                if len(lines) > 10:
-                    self.console.print(f"[dim]    ... ({len(lines) - 10} more lines)[/dim]")
+                multi_args[k] = v
             else:
-                # Single value: show truncated repr
                 v_repr = repr(v)
-                if len(v_repr) > 80:
-                    v_repr = v_repr[:80] + "..."
-                self.console.print(f"[dim]  {k}: {v_repr}[/dim]")
+                if len(v_repr) > 60:
+                    v_repr = v_repr[:60] + "..."
+                simple_args.append(f"{k}={v_repr}")
+
+        header = f"▶ {tool.name}({', '.join(simple_args)})"
+        self.console.print(f"\n[dim]{header}[/dim]")
+
+        # Show multi-line args in panels
+        for k, v in multi_args.items():
+            lines = v.split("\n")
+            if len(lines) > 10:
+                display = "\n".join(lines[:10]) + f"\n[dim]... ({len(lines) - 10} more lines)[/dim]"
+            else:
+                display = v
+            self.console.print(Panel(
+                rich_escape(display),
+                title=f"[dim]{k}[/dim]",
+                title_align="left",
+                border_style="dim",
+                padding=(0, 1),
+            ))
 
     def _show_tool_result(self, result: str) -> None:
         """Display a tool result (truncated if long)."""
