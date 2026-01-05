@@ -128,10 +128,16 @@ class PermissionManager:
             always_desc = tool.name
 
         while True:
-            response = self.console.input(
+            raw = self.console.input(
                 f"[dim](y)es / (n)o / (a)lways allow {always_desc} / (A)ll:[/dim] "
-            ).strip().lower()
+            ).strip()
 
+            if raw in ("A", "All"):
+                self.allow_all = True
+                self.console.print("[dim]Will allow all tools for this session[/dim]")
+                return True
+
+            response = raw.lower()
             if response in ("y", "yes"):
                 return True
             elif response in ("n", "no"):
@@ -151,10 +157,6 @@ class PermissionManager:
                 else:
                     self.allowed_tools.add(tool.name)
                     self.console.print(f"[dim]Will allow '{tool.name}' for this session[/dim]")
-                return True
-            elif response == "A":  # Capital A for allow all
-                self.allow_all = True
-                self.console.print("[dim]Will allow all tools for this session[/dim]")
                 return True
             else:
                 self.console.print("[red]Please enter y, n, a, or A[/red]")
