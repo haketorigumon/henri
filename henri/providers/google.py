@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 from henri.config import DEFAULT_GOOGLE_MODEL, DEFAULT_GOOGLE_LOCATION
 from henri.messages import Message, ToolCall
-from henri.providers.base import Provider, StreamEvent
+from henri.providers.base import Provider, StreamEvent, Usage
 
 
 class GoogleProvider(Provider):
@@ -106,6 +106,7 @@ class GoogleProvider(Provider):
         )
 
         tool_calls = []
+        usage = None
 
         response = await self.client.aio.models.generate_content_stream(
             model=self.model_id,
@@ -132,9 +133,17 @@ class GoogleProvider(Provider):
                                     args=dict(fc.args) if fc.args else {},
                                 ))
 
+            # Capture usage from the last chunk
+            if chunk.usage_metadata:
+                usage = Usage(
+                    input_tokens=chunk.usage_metadata.prompt_token_count or 0,
+                    output_tokens=chunk.usage_metadata.candidates_token_count or 0,
+                )
+
         # Final event with tool calls and stop reason
         stop_reason = "tool_use" if tool_calls else "end_turn"
         yield StreamEvent(
             tool_calls=tool_calls if tool_calls else None,
             stop_reason=stop_reason,
+            usage=usage,
         )

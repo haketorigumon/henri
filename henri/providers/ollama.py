@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 from henri.config import DEFAULT_OLLAMA_MODEL, DEFAULT_OLLAMA_HOST
 from henri.messages import Message, ToolCall
-from henri.providers.base import Provider, StreamEvent
+from henri.providers.base import Provider, StreamEvent, Usage
 
 
 class OllamaProvider(Provider):
@@ -86,6 +86,7 @@ class OllamaProvider(Provider):
         ollama_messages = self._messages_to_ollama(messages, system)
 
         tool_calls = []
+        usage = None
 
         async for chunk in await self.client.chat(
             model=self.model_id,
@@ -114,8 +115,14 @@ class OllamaProvider(Provider):
 
             # Check if done
             if chunk.get("done"):
+                # Ollama reports tokens in final chunk
+                usage = Usage(
+                    input_tokens=chunk.get("prompt_eval_count", 0),
+                    output_tokens=chunk.get("eval_count", 0),
+                )
                 stop_reason = "tool_use" if tool_calls else "end_turn"
                 yield StreamEvent(
                     tool_calls=tool_calls if tool_calls else None,
                     stop_reason=stop_reason,
+                    usage=usage,
                 )

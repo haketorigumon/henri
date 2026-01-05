@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 from henri.config import DEFAULT_BEDROCK_MODEL, DEFAULT_BEDROCK_REGION
 from henri.messages import Message, ToolCall
-from henri.providers.base import Provider, StreamEvent
+from henri.providers.base import Provider, StreamEvent, Usage
 
 
 class BedrockProvider(Provider):
@@ -93,6 +93,8 @@ class BedrockProvider(Provider):
         current_tool_name = None
         current_tool_input = ""
         tool_calls = []
+        usage = None
+        stop_reason = None
 
         for event in response["stream"]:
             if "contentBlockStart" in event:
@@ -123,7 +125,18 @@ class BedrockProvider(Provider):
 
             elif "messageStop" in event:
                 stop_reason = event["messageStop"].get("stopReason")
-                yield StreamEvent(
-                    tool_calls=tool_calls if tool_calls else None,
-                    stop_reason=stop_reason,
+
+            elif "metadata" in event:
+                # metadata comes after messageStop
+                u = event["metadata"].get("usage", {})
+                usage = Usage(
+                    input_tokens=u.get("inputTokens", 0),
+                    output_tokens=u.get("outputTokens", 0),
                 )
+
+        # Yield final event after all stream events processed
+        yield StreamEvent(
+            tool_calls=tool_calls if tool_calls else None,
+            stop_reason=stop_reason,
+            usage=usage,
+        )

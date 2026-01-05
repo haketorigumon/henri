@@ -59,6 +59,12 @@ def main():
         nargs="*",
         help="Path(s) to Python hook file(s) (defines TOOLS, PATH_BASED, etc.)",
     )
+    parser.add_argument(
+        "--max-turns",
+        type=int,
+        default=20,
+        help="Maximum conversation turns (default: 20)",
+    )
     args = parser.parse_args()
 
     # Determine model based on provider if not specified
@@ -82,6 +88,7 @@ def main():
         region=args.region,
         host=args.host,
         hooks=hooks,
+        max_turns=args.max_turns,
     ))
 
 

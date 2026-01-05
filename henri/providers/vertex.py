@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 from henri.config import DEFAULT_VERTEX_MODEL, DEFAULT_VERTEX_REGION
 from henri.messages import Message, ToolCall
-from henri.providers.base import Provider, StreamEvent
+from henri.providers.base import Provider, StreamEvent, Usage
 
 
 class VertexProvider(Provider):
@@ -124,11 +124,18 @@ class VertexProvider(Provider):
                 elif event.type == "message_stop":
                     pass
 
-            # Get final message for stop reason
+            # Get final message for stop reason and usage
             final_message = stream.get_final_message()
             stop_reason = final_message.stop_reason if final_message else "end_turn"
+            usage = None
+            if final_message and final_message.usage:
+                usage = Usage(
+                    input_tokens=final_message.usage.input_tokens,
+                    output_tokens=final_message.usage.output_tokens,
+                )
 
         yield StreamEvent(
             tool_calls=tool_calls if tool_calls else None,
             stop_reason=stop_reason,
+            usage=usage,
         )

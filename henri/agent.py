@@ -77,6 +77,7 @@ class Agent:
         tools: list[Tool] | None = None,
         console: Console | None = None,
         permissions: PermissionManager | None = None,
+        max_turns: int | None = None,
     ):
         self.provider = provider
         self.tools = tools or get_default_tools()
@@ -92,6 +93,12 @@ class Agent:
         self.messages: list[Message] = []
         self._status: Status | None = None
         self._pondering_task: asyncio.Task | None = None
+
+        # Metrics
+        self.max_turns = max_turns
+        self.turns = 0
+        self.input_tokens = 0
+        self.output_tokens = 0
 
     def _cancel_pondering(self) -> None:
         """Cancel any pending pondering status."""
@@ -123,11 +130,21 @@ class Agent:
             self._status.stop()
             self._status = None
 
-    async def chat(self, user_input: str) -> None:
-        """Process a user message and stream the response."""
+    async def chat(self, user_input: str) -> bool:
+        """Process a user message and stream the response.
+
+        Returns True if completed normally, False if max turns reached.
+        """
         self.messages.append(Message.user(user_input))
 
         while True:
+            self.turns += 1
+
+            # Check max turns
+            if self.max_turns and self.turns > self.max_turns:
+                self.console.print(f"\n[yellow]Max turns ({self.max_turns}) reached.[/yellow]")
+                return False
+
             # Stream response from LLM
             response_text = ""
             tool_calls = []
@@ -157,6 +174,11 @@ class Agent:
 
                 if event.stop_reason:
                     stop_reason = event.stop_reason
+
+                # Track token usage
+                if event.usage:
+                    self.input_tokens += event.usage.input_tokens
+                    self.output_tokens += event.usage.output_tokens
 
             self._cancel_pondering()
             self._hide_status()
@@ -218,6 +240,8 @@ class Agent:
             # Add results and continue the loop
             self.messages.append(Message.tool_result(results))
 
+        return True
+
     def _truncate(self, text: str, limit: int = 10) -> str:
         """Truncate multi-line text, returning (display, was_truncated)."""
         lines = text.split("\n")
@@ -260,6 +284,7 @@ async def run_agent(
     region: str | None = None,
     host: str | None = None,
     hooks: list | None = None,
+    max_turns: int | None = None,
 ):
     """Run the interactive agent loop."""
     console = Console()
@@ -311,7 +336,13 @@ async def run_agent(
         auto_allow=auto_allow,
         reject_prompts=reject_prompts,
     )
-    agent = Agent(provider=llm, tools=tools, console=console, permissions=permissions)
+    agent = Agent(
+        provider=llm,
+        tools=tools,
+        console=console,
+        permissions=permissions,
+        max_turns=max_turns,
+    )
 
     console.print(Panel(
         f"[bold]Henri[/bold] - A pedagogical Claude Code clone\n"
@@ -352,3 +383,6 @@ async def run_agent(
             break
         except EOFError:
             break
+
+    # Print metrics
+    console.print(f"\n[dim]Turns: {agent.turns} | Tokens: {agent.input_tokens} in, {agent.output_tokens} out[/dim]")

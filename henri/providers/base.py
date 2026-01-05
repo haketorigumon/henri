@@ -12,12 +12,20 @@ from henri.messages import Message, ToolCall
 
 
 @dataclass
+class Usage:
+    """Token usage from a response."""
+    input_tokens: int = 0
+    output_tokens: int = 0
+
+
+@dataclass
 class StreamEvent:
     """An event from a streaming response."""
     text: str = ""
     tool_calls: list[ToolCall] | None = None
     stop_reason: str | None = None
     tool_use_started: bool = False  # Signal that tool use is beginning
+    usage: Usage | None = None  # Token usage (typically at end of response)
 
 
 class Provider(ABC):
