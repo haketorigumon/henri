@@ -21,6 +21,7 @@ You have access to these tools:
 - write_file: Create or overwrite a file
 - edit_file: Replace exact text in a file
 - grep: Search for patterns in files using ripgrep
+- glob: Find files matching a pattern (e.g., '**/*.py')
 - web_fetch: Fetch content from a URL
 - bash: Execute shell commands
 

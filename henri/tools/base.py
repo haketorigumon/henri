@@ -262,6 +262,44 @@ class GrepTool(Tool):
             return f"[error: {e}]"
 
 
+class GlobTool(Tool):
+    """Find files matching a glob pattern."""
+
+    name = "glob"
+    description = "Find files matching a glob pattern (e.g., '**/*.py', 'src/**/*.ts')."
+    parameters = {
+        "type": "object",
+        "properties": {
+            "pattern": {
+                "type": "string",
+                "description": "The glob pattern to match (e.g., '**/*.py')",
+            },
+            "path": {
+                "type": "string",
+                "description": "Directory to search in (default: current directory)",
+                "default": ".",
+            },
+        },
+        "required": ["pattern"],
+    }
+    requires_permission = True  # Permission managed by path (auto-allow within cwd)
+
+    def execute(self, pattern: str, path: str = ".") -> str:
+        try:
+            p = Path(path).expanduser()
+            if not p.exists():
+                return f"[error: directory not found: {path}]"
+            if not p.is_dir():
+                return f"[error: not a directory: {path}]"
+
+            matches = sorted(p.glob(pattern))[:100]
+            if not matches:
+                return "(no matches)"
+            return "\n".join(str(m) for m in matches)
+        except Exception as e:
+            return f"[error: {e}]"
+
+
 class _HTMLTextExtractor(HTMLParser):
     """Simple HTML to text converter."""
 
@@ -345,5 +383,6 @@ def get_default_tools() -> list[Tool]:
         WriteFileTool(),
         EditFileTool(),
         GrepTool(),
+        GlobTool(),
         WebFetchTool(),
     ]
