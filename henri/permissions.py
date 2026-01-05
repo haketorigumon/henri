@@ -9,6 +9,10 @@ from henri.messages import ToolCall
 from henri.tools.base import Tool
 
 
+# Tools that use path-based permission (auto-allow within cwd)
+PATH_BASED_TOOLS = {"grep", "glob", "read_file"}
+
+
 @dataclass
 class PermissionManager:
     """Manages permissions for tool execution."""
@@ -19,10 +23,23 @@ class PermissionManager:
     # Exact bash commands that have been allowed
     allowed_bash_commands: set[str] = field(default_factory=set)
 
+    # Paths that have been allowed for path-based tools
+    allowed_paths: set[str] = field(default_factory=set)
+
     # If True, allow all tools without prompting
     allow_all: bool = False
 
     console: Console = field(default_factory=Console)
+
+    def _is_path_within_cwd(self, path: str) -> bool:
+        """Check if a path is within the current working directory."""
+        from pathlib import Path
+        try:
+            resolved = Path(path).resolve()
+            cwd = Path.cwd().resolve()
+            return resolved.is_relative_to(cwd)
+        except (ValueError, OSError):
+            return False
 
     def check(self, tool: Tool, call: ToolCall) -> bool:
         """Check if a tool call is allowed. Prompts user if needed."""
@@ -36,6 +53,15 @@ class PermissionManager:
         if tool.name == "bash":
             command = call.args.get("command", "")
             if command in self.allowed_bash_commands:
+                return True
+        # For path-based tools, auto-allow within cwd or allowed paths
+        elif tool.name in PATH_BASED_TOOLS:
+            path = call.args.get("path", ".")
+            if self._is_path_within_cwd(path):
+                return True
+            from pathlib import Path
+            resolved = str(Path(path).resolve())
+            if resolved in self.allowed_paths:
                 return True
         elif tool.name in self.allowed_tools:
             return True
@@ -68,6 +94,12 @@ class PermissionManager:
                     command = call.args.get("command", "")
                     self.allowed_bash_commands.add(command)
                     self.console.print(f"[dim]Will allow this exact bash command for this session[/dim]")
+                elif tool.name in PATH_BASED_TOOLS:
+                    from pathlib import Path
+                    path = call.args.get("path", ".")
+                    resolved = str(Path(path).resolve())
+                    self.allowed_paths.add(resolved)
+                    self.console.print(f"[dim]Will allow access to '{resolved}' for this session[/dim]")
                 else:
                     self.allowed_tools.add(tool.name)
                     self.console.print(f"[dim]Will allow '{tool.name}' for this session[/dim]")

@@ -75,7 +75,7 @@ class ReadFileTool(Tool):
         },
         "required": ["path"],
     }
-    requires_permission = False  # Reading is generally safe
+    requires_permission = True  # Permission managed by path (auto-allow within cwd)
 
     def execute(self, path: str) -> str:
         try:
@@ -223,7 +223,7 @@ class GrepTool(Tool):
         },
         "required": ["pattern"],
     }
-    requires_permission = False  # Read-only operation
+    requires_permission = True  # Permission managed by path (auto-allow within cwd)
 
     def execute(
         self,
