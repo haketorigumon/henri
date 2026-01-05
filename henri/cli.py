@@ -2,6 +2,9 @@
 
 import argparse
 import asyncio
+import importlib.util
+import sys
+from pathlib import Path
 
 from henri.agent import run_agent
 from henri.config import (
@@ -13,6 +16,19 @@ from henri.config import (
     DEFAULT_VERTEX_MODEL,
 )
 from henri.providers import PROVIDERS
+
+
+def load_hook(hook_path: str):
+    """Load a hook module from a file path."""
+    path = Path(hook_path).resolve()
+    if not path.exists():
+        raise FileNotFoundError(f"Hook file not found: {hook_path}")
+
+    spec = importlib.util.spec_from_file_location("hook", path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["hook"] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 def main():
@@ -38,6 +54,11 @@ def main():
         default=DEFAULT_OLLAMA_HOST,
         help="Host URL for Ollama provider",
     )
+    parser.add_argument(
+        "--hook",
+        nargs="*",
+        help="Path(s) to Python hook file(s) (defines TOOLS, PATH_BASED, etc.)",
+    )
     args = parser.parse_args()
 
     # Determine model based on provider if not specified
@@ -49,11 +70,18 @@ def main():
             "vertex": DEFAULT_VERTEX_MODEL,
         }[args.provider]
 
+    # Load hooks if specified
+    hooks = []
+    if args.hook:
+        for hook_path in args.hook:
+            hooks.append(load_hook(hook_path))
+
     asyncio.run(run_agent(
         provider=args.provider,
         model=args.model,
         region=args.region,
         host=args.host,
+        hooks=hooks,
     ))
 
 

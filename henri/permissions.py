@@ -1,6 +1,7 @@
 """Simple permission management for tool execution."""
 
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from rich.console import Console
 from rich.panel import Panel
@@ -9,31 +10,56 @@ from henri.messages import ToolCall
 from henri.tools.base import Tool
 
 
-# Tools that use path-based permission (auto-allow within cwd)
-PATH_BASED_TOOLS = {"grep", "glob", "read_file"}
+# Default configurations
+DEFAULT_PATH_BASED = {"grep", "glob", "read_file", "write_file", "edit_file"}
+DEFAULT_AUTO_ALLOW_CWD = {"grep", "glob", "read_file"}
+DEFAULT_AUTO_ALLOW = set()
 
 
 @dataclass
 class PermissionManager:
     """Manages permissions for tool execution."""
 
-    # Tools that have been permanently allowed for this session
+    # Configuration: tools where "always" means per-path
+    path_based: set[str] = field(default_factory=lambda: set(DEFAULT_PATH_BASED))
+
+    # Configuration: path-based tools that auto-allow within cwd
+    auto_allow_cwd: set[str] = field(default_factory=lambda: set(DEFAULT_AUTO_ALLOW_CWD))
+
+    # Configuration: tools that are always allowed (no prompts)
+    auto_allow: set[str] = field(default_factory=lambda: set(DEFAULT_AUTO_ALLOW))
+
+    # Session state: tools that have been permanently allowed
     allowed_tools: set[str] = field(default_factory=set)
 
-    # Exact bash commands that have been allowed
+    # Session state: exact bash commands that have been allowed
     allowed_bash_commands: set[str] = field(default_factory=set)
 
-    # Paths that have been allowed for path-based tools
+    # Session state: paths that have been allowed for path-based tools
     allowed_paths: set[str] = field(default_factory=set)
 
-    # If True, allow all tools without prompting
+    # Session state: allow all tools without prompting
     allow_all: bool = False
+
+    # If True, reject (instead of prompting) when permission needed
+    reject_prompts: bool = False
 
     console: Console = field(default_factory=Console)
 
+    def _is_path_based(self, tool_name: str) -> bool:
+        """Check if a tool uses per-path permission tracking."""
+        return tool_name in self.path_based
+
+    def _is_auto_allow_cwd(self, tool_name: str) -> bool:
+        """Check if a tool auto-allows within cwd."""
+        return tool_name in self.auto_allow_cwd
+
+    def _is_auto_allow(self, tool_name: str) -> bool:
+        """Check if a tool is always allowed."""
+        return tool_name in self.auto_allow
+
     def _is_path_within_cwd(self, path: str) -> bool:
         """Check if a path is within the current working directory."""
-        from pathlib import Path
         try:
             resolved = Path(path).resolve()
             cwd = Path.cwd().resolve()
@@ -49,22 +75,31 @@ class PermissionManager:
         if self.allow_all:
             return True
 
+        # Pre-configured always-allowed tools
+        if self._is_auto_allow(tool.name):
+            return True
+
         # For bash, check exact command match
         if tool.name == "bash":
             command = call.args.get("command", "")
             if command in self.allowed_bash_commands:
                 return True
-        # For path-based tools, auto-allow within cwd or allowed paths
-        elif tool.name in PATH_BASED_TOOLS:
+        # For path-based tools
+        elif self._is_path_based(tool.name):
             path = call.args.get("path", ".")
-            if self._is_path_within_cwd(path):
-                return True
-            from pathlib import Path
             resolved = str(Path(path).resolve())
+            # Check if path already allowed
             if resolved in self.allowed_paths:
+                return True
+            # Auto-allow within cwd only for certain tools
+            if self._is_auto_allow_cwd(tool.name) and self._is_path_within_cwd(path):
                 return True
         elif tool.name in self.allowed_tools:
             return True
+
+        if self.reject_prompts:
+            self.console.print(f"[dim]Auto-denied: {tool.name}[/dim]")
+            return False
 
         return self._prompt_user(tool, call)
 
@@ -94,8 +129,7 @@ class PermissionManager:
                     command = call.args.get("command", "")
                     self.allowed_bash_commands.add(command)
                     self.console.print(f"[dim]Will allow this exact bash command for this session[/dim]")
-                elif tool.name in PATH_BASED_TOOLS:
-                    from pathlib import Path
+                elif self._is_path_based(tool.name):
                     path = call.args.get("path", ".")
                     resolved = str(Path(path).resolve())
                     self.allowed_paths.add(resolved)

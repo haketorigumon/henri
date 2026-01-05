@@ -14,16 +14,54 @@ from henri.providers import Provider, create_provider
 from henri.tools.base import Tool, get_default_tools
 
 
-SYSTEM_PROMPT = """You are Henri, a helpful coding assistant.
+def summarize_tools_and_permissions(
+    tools: list[Tool],
+    auto_allow_cwd: set[str],
+    auto_allow: set[str],
+    reject_prompts: bool = False,
+) -> tuple[list[str], list[str]]:
+    """Summarize tools and permissions. Returns (tool_lines, perm_lines)."""
+    tool_lines = [f"- {t.name}: {t.description}" for t in tools]
+
+    tool_names = {t.name for t in tools}
+    auto_all = tool_names & auto_allow
+    auto_cwd = (tool_names & auto_allow_cwd) - auto_all
+    need_perm = tool_names - auto_cwd - auto_all
+
+    perm_lines = []
+    if auto_all:
+        perm_lines.append(f"Auto-allow: {', '.join(sorted(auto_all))}")
+    if auto_cwd:
+        perm_lines.append(f"Auto-allow in cwd: {', '.join(sorted(auto_cwd))}")
+    if need_perm:
+        perm_lines.append(f"Require permission: {', '.join(sorted(need_perm))}")
+    if not perm_lines:
+        perm_lines.append("All tools require permission.")
+    if reject_prompts:
+        perm_lines.append("Other prompts: auto-denied")
+
+    return tool_lines, perm_lines
+
+
+def build_system_prompt(
+    tools: list[Tool],
+    auto_allow_cwd: set[str] | None = None,
+    auto_allow: set[str] | None = None,
+    reject_prompts: bool = False,
+) -> str:
+    """Build system prompt with available tools and permissions."""
+    tool_lines, perm_lines = summarize_tools_and_permissions(
+        tools, auto_allow_cwd or set(), auto_allow or set(), reject_prompts
+    )
+    tools_section = "\n".join(tool_lines)
+    perms_section = "\n".join(perm_lines)
+    return f"""You are Henri, a helpful coding assistant.
 
 You have access to these tools:
-- read_file: Read file contents
-- write_file: Create or overwrite a file
-- edit_file: Replace exact text in a file
-- grep: Search for patterns in files using ripgrep
-- glob: Find files matching a pattern (e.g., '**/*.py')
-- web_fetch: Fetch content from a URL
-- bash: Execute shell commands
+{tools_section}
+
+Permissions:
+{perms_section}
 
 Be concise and direct in your responses."""
 
@@ -36,12 +74,19 @@ class Agent:
         provider: Provider,
         tools: list[Tool] | None = None,
         console: Console | None = None,
+        permissions: PermissionManager | None = None,
     ):
         self.provider = provider
         self.tools = tools or get_default_tools()
         self.tools_by_name = {t.name: t for t in self.tools}
         self.console = console or Console()
-        self.permissions = PermissionManager(console=self.console)
+        self.permissions = permissions or PermissionManager(console=self.console)
+        self.system_prompt = build_system_prompt(
+            self.tools,
+            auto_allow_cwd=self.permissions.auto_allow_cwd,
+            auto_allow=self.permissions.auto_allow,
+            reject_prompts=self.permissions.reject_prompts,
+        )
         self.messages: list[Message] = []
         self._status: Status | None = None
         self._pondering_task: asyncio.Task | None = None
@@ -92,7 +137,7 @@ class Agent:
             async for event in self.provider.stream(
                 self.messages,
                 self.tools,
-                system=SYSTEM_PROMPT,
+                system=self.system_prompt,
             ):
                 if event.text:
                     self._cancel_pondering()
@@ -180,6 +225,7 @@ async def run_agent(
     model: str,
     region: str | None = None,
     host: str | None = None,
+    hooks: list | None = None,
 ):
     """Run the interactive agent loop."""
     console = Console()
@@ -194,7 +240,42 @@ async def run_agent(
         provider_kwargs["host"] = host
 
     llm = create_provider(provider, **provider_kwargs)
-    agent = Agent(provider=llm, console=console)
+
+    # Get tools from hooks (if any) and merge with defaults
+    tools = get_default_tools()
+    hooks = hooks or []
+    for hook in hooks:
+        if hasattr(hook, "TOOLS"):
+            tools = tools + hook.TOOLS
+        if hasattr(hook, "REMOVE_TOOLS"):
+            remove = hook.REMOVE_TOOLS
+            tools = [t for t in tools if t.name not in remove]
+
+    # Build permission manager with hook overrides
+    from henri.permissions import DEFAULT_PATH_BASED, DEFAULT_AUTO_ALLOW_CWD, DEFAULT_AUTO_ALLOW
+    path_based = set(DEFAULT_PATH_BASED)
+    auto_allow_cwd = set(DEFAULT_AUTO_ALLOW_CWD)
+    auto_allow = set(DEFAULT_AUTO_ALLOW)
+
+    reject_prompts = False
+    for hook in hooks:
+        if hasattr(hook, "PATH_BASED"):
+            path_based |= hook.PATH_BASED
+        if hasattr(hook, "AUTO_ALLOW_CWD"):
+            auto_allow_cwd |= hook.AUTO_ALLOW_CWD
+        if hasattr(hook, "AUTO_ALLOW"):
+            auto_allow |= hook.AUTO_ALLOW
+        if hasattr(hook, "REJECT_PROMPTS"):
+            reject_prompts = reject_prompts or hook.REJECT_PROMPTS
+
+    permissions = PermissionManager(
+        console=console,
+        path_based=path_based,
+        auto_allow_cwd=auto_allow_cwd,
+        auto_allow=auto_allow,
+        reject_prompts=reject_prompts,
+    )
+    agent = Agent(provider=llm, tools=tools, console=console, permissions=permissions)
 
     console.print(Panel(
         f"[bold]Henri[/bold] - A pedagogical Claude Code clone\n"
@@ -202,6 +283,17 @@ async def run_agent(
         "Type your message and press Enter. Use Ctrl+C to exit.",
         border_style="blue",
     ))
+
+    # Print tools and permissions summary
+    tool_lines, perm_lines = summarize_tools_and_permissions(
+        tools, auto_allow_cwd, auto_allow, reject_prompts
+    )
+    console.print("\n[bold]Tools:[/bold]")
+    for line in tool_lines:
+        console.print(line)
+    console.print("\n[bold]Permissions:[/bold]")
+    for line in perm_lines:
+        console.print(f"  {line}")
 
     # Session with history for up/down arrow recall
     session = PromptSession(history=FileHistory(".henri_history"))
