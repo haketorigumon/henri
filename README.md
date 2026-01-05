@@ -16,6 +16,7 @@ Henri is a minimal but complete AI coding assistant that demonstrates the core a
 
 ```bash
 pip install -e .
+brew install ripgrep  # for the grep tool
 ```
 
 ## Usage

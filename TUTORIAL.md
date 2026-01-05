@@ -420,15 +420,13 @@ The key insight: each provider's job is to translate between Henri's message for
 
 ## Exercises
 
-1. **Add an edit tool**: Implement string replacement in files (harder than write, needs old/new string matching).
+- **Add conversation history**: Save/load `self.messages` to JSON to resume conversations.
 
-2. **Add conversation history**: Save/load `self.messages` to JSON to resume conversations.
+- **Add file pattern permissions**: Instead of per-tool, allow "write to *.py files" patterns.
 
-3. **Add file pattern permissions**: Instead of per-tool, allow "write to *.py files" patterns.
+- **Add a new provider**: Try adding OpenAI, Anthropic direct API, or another LLM service.
 
-4. **Add a new provider**: Try adding OpenAI, Anthropic direct API, or another LLM service.
-
-5. **Add streaming tool output**: For long-running bash commands, stream output as it happens.
+- **Add streaming tool output**: For long-running bash commands, stream output as it happens.
 
 ## Further Reading
 

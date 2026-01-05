@@ -1,7 +1,10 @@
 """Base tool class and built-in tools."""
 
+import re
 import subprocess
+import urllib.request
 from abc import ABC, abstractmethod
+from html.parser import HTMLParser
 from pathlib import Path
 
 
@@ -188,6 +191,159 @@ class EditFileTool(Tool):
             return f"[error: {e}]"
 
 
+class GrepTool(Tool):
+    """Search for patterns in files using ripgrep."""
+
+    name = "grep"
+    description = (
+        "Search for a regex pattern in files using ripgrep (rg). "
+        "Returns matching lines with file paths and line numbers."
+    )
+    parameters = {
+        "type": "object",
+        "properties": {
+            "pattern": {
+                "type": "string",
+                "description": "The regex pattern to search for",
+            },
+            "path": {
+                "type": "string",
+                "description": "Directory or file to search in (default: current directory)",
+                "default": ".",
+            },
+            "glob": {
+                "type": "string",
+                "description": "Only search files matching this glob pattern (e.g., '*.py')",
+            },
+            "ignore_case": {
+                "type": "boolean",
+                "description": "Case-insensitive search",
+                "default": False,
+            },
+        },
+        "required": ["pattern"],
+    }
+    requires_permission = False  # Read-only operation
+
+    def execute(
+        self,
+        pattern: str,
+        path: str = ".",
+        glob: str | None = None,
+        ignore_case: bool = False,
+    ) -> str:
+        try:
+            cmd = ["rg", "--line-number", "--max-count", "100"]
+            if ignore_case:
+                cmd.append("--ignore-case")
+            if glob:
+                cmd.extend(["--glob", glob])
+            cmd.extend([pattern, path])
+
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            output = result.stdout
+            if result.returncode == 1:  # No matches
+                return "(no matches)"
+            if result.returncode != 0:
+                return f"[error: {result.stderr}]"
+            if len(output) > 50_000:
+                output = output[:50_000] + "\n[truncated...]"
+            return output or "(no matches)"
+        except FileNotFoundError:
+            return "[error: ripgrep (rg) not found. Install it: brew install ripgrep]"
+        except subprocess.TimeoutExpired:
+            return "[error: search timed out after 30 seconds]"
+        except Exception as e:
+            return f"[error: {e}]"
+
+
+class _HTMLTextExtractor(HTMLParser):
+    """Simple HTML to text converter."""
+
+    def __init__(self):
+        super().__init__()
+        self.text = []
+        self._skip = False
+
+    def handle_starttag(self, tag, attrs):
+        if tag in ("script", "style", "head"):
+            self._skip = True
+
+    def handle_endtag(self, tag):
+        if tag in ("script", "style", "head"):
+            self._skip = False
+        if tag in ("p", "br", "div", "h1", "h2", "h3", "h4", "h5", "h6", "li"):
+            self.text.append("\n")
+
+    def handle_data(self, data):
+        if not self._skip:
+            self.text.append(data)
+
+    def get_text(self):
+        return re.sub(r"\n{3,}", "\n\n", "".join(self.text).strip())
+
+
+class WebFetchTool(Tool):
+    """Fetch content from a URL."""
+
+    name = "web_fetch"
+    description = "Fetch content from a URL and return the text. HTML is converted to plain text."
+    parameters = {
+        "type": "object",
+        "properties": {
+            "url": {
+                "type": "string",
+                "description": "The URL to fetch",
+            },
+        },
+        "required": ["url"],
+    }
+    requires_permission = True  # Network access requires permission
+
+    def execute(self, url: str) -> str:
+        try:
+            # Ensure URL has a scheme
+            if not url.startswith(("http://", "https://")):
+                url = "https://" + url
+
+            req = urllib.request.Request(
+                url,
+                headers={"User-Agent": "Henri/0.1 (AI coding assistant)"},
+            )
+            with urllib.request.urlopen(req, timeout=30) as response:
+                content_type = response.headers.get("Content-Type", "")
+                content = response.read().decode("utf-8", errors="replace")
+
+                # Convert HTML to text
+                if "html" in content_type.lower():
+                    parser = _HTMLTextExtractor()
+                    parser.feed(content)
+                    content = parser.get_text()
+
+                if len(content) > 50_000:
+                    content = content[:50_000] + "\n[truncated...]"
+
+                return content or "(empty response)"
+        except urllib.error.HTTPError as e:
+            return f"[error: HTTP {e.code} {e.reason}]"
+        except urllib.error.URLError as e:
+            return f"[error: {e.reason}]"
+        except Exception as e:
+            return f"[error: {e}]"
+
+
 def get_default_tools() -> list[Tool]:
     """Return the default set of tools."""
-    return [BashTool(), ReadFileTool(), WriteFileTool(), EditFileTool()]
+    return [
+        BashTool(),
+        ReadFileTool(),
+        WriteFileTool(),
+        EditFileTool(),
+        GrepTool(),
+        WebFetchTool(),
+    ]
