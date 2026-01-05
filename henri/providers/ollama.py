@@ -105,6 +105,7 @@ class OllamaProvider(Provider):
                     yield StreamEvent(tool_use_started=True)
                 for tc in tc_list:
                     fn = tc.get("function", {})
+                    # Ollama doesn't provide tool call IDs, using name as ID
                     tool_calls.append(ToolCall(
                         id=fn.get("name", "unknown"),
                         name=fn.get("name", "unknown"),
