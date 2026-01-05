@@ -1,6 +1,7 @@
 """Main agent loop for Henri."""
 
 import asyncio
+import sys
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
@@ -295,13 +296,19 @@ async def run_agent(
     for line in perm_lines:
         console.print(f"  {line}")
 
-    # Session with history for up/down arrow recall
-    session = PromptSession(history=FileHistory(".henri_history"))
+    # Use prompt_toolkit only for interactive terminals
+    interactive = sys.stdin.isatty()
+    session = PromptSession(history=FileHistory(".henri_history")) if interactive else None
 
     while True:
         try:
             console.print()
-            user_input = await session.prompt_async("> ")
+            if interactive:
+                user_input = await session.prompt_async("> ")
+            else:
+                user_input = sys.stdin.readline()
+                if not user_input:  # EOF
+                    break
             if not user_input.strip():
                 continue
             await agent.chat(user_input)
