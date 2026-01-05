@@ -159,7 +159,7 @@ henri --region us-east5              # Vertex AI
 henri --host http://localhost:11434  # Ollama
 
 # Limit turns (for benchmarking)
-henri --max-turns 10                 # Stop after 10 turns (default: 20)
+henri --max-turns 10                 # Stop after 10 turns (default: unlimited)
 ```
 
 On exit, Henri prints metrics: `Turns: X | Tokens: Y in, Z out`

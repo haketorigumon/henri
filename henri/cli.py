@@ -62,8 +62,8 @@ def main():
     parser.add_argument(
         "--max-turns",
         type=int,
-        default=20,
-        help="Maximum conversation turns (default: 20)",
+        default=None,
+        help="Maximum conversation turns (default: unlimited)",
     )
     args = parser.parse_args()
 
