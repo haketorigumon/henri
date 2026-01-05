@@ -418,6 +418,118 @@ DEFAULT_MY_PROVIDER_MODEL = "some-model"
 
 The key insight: each provider's job is to translate between Henri's message format and the LLM API's format. The agent loop doesn't change.
 
+## Part 8: Hooks
+
+Hooks let you extend Henri without modifying core code. They're Python files that define special variables to customize tools and permissions.
+
+### Using Hooks
+
+```bash
+henri --hook hooks/dafny.py
+henri --hook hooks/dafny.py hooks/bench.py  # Multiple hooks
+```
+
+### Hook Variables
+
+Hooks can define any of these variables:
+
+| Variable | Type | Effect |
+|----------|------|--------|
+| `TOOLS` | `list[Tool]` | Tools to add |
+| `REMOVE_TOOLS` | `set[str]` | Tool names to remove |
+| `PATH_BASED` | `set[str]` | Tools that get per-path "always allow" |
+| `AUTO_ALLOW_CWD` | `set[str]` | Tools to auto-allow within cwd |
+| `AUTO_ALLOW` | `set[str]` | Tools to always allow (no prompts) |
+| `REJECT_PROMPTS` | `bool` | Reject (don't prompt) for permissions |
+
+### Example: Adding a Domain-Specific Tool
+
+Here's `hooks/dafny.py` - adds a Dafny verification tool:
+
+```python
+"""Usage: henri --hook hooks/dafny.py"""
+
+import subprocess
+from henri.tools.base import Tool
+
+
+class DafnyVerifyTool(Tool):
+    name = "dafny_verify"
+    description = "Run 'dafny verify' on a Dafny file."
+    parameters = {
+        "type": "object",
+        "properties": {
+            "path": {
+                "type": "string",
+                "description": "Path to the .dfy file to verify",
+            },
+        },
+        "required": ["path"],
+    }
+    requires_permission = True
+
+    def execute(self, path: str) -> str:
+        try:
+            result = subprocess.run(
+                ["dafny", "verify", path],
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+            return result.stdout + result.stderr or "(no output)"
+        except FileNotFoundError:
+            return "[error: dafny not found]"
+
+
+# Add the tool
+TOOLS = [DafnyVerifyTool()]
+
+# Per-path permissions (not global "always allow")
+PATH_BASED = {"dafny_verify"}
+
+# Auto-allow within current working directory
+AUTO_ALLOW_CWD = {"dafny_verify"}
+```
+
+### Example: Restricting for Benchmarks
+
+Here's `hooks/bench.py` - for non-interactive/automated use:
+
+```python
+"""Usage: echo "task" | henri --hook hooks/bench.py"""
+
+# Remove dangerous tools
+REMOVE_TOOLS = {"bash", "web_fetch"}
+
+# Auto-allow file writes within cwd
+AUTO_ALLOW_CWD = {"write_file", "edit_file"}
+
+# Don't prompt - reject if permission needed
+REJECT_PROMPTS = True
+```
+
+### How Hooks Are Loaded
+
+The CLI loads hooks as Python modules and merges their settings:
+
+```python
+def load_hook(hook_path: str):
+    spec = importlib.util.spec_from_file_location("hook", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+# In run_agent():
+for hook in hooks:
+    if hasattr(hook, "TOOLS"):
+        tools = tools + hook.TOOLS
+    if hasattr(hook, "REMOVE_TOOLS"):
+        tools = [t for t in tools if t.name not in hook.REMOVE_TOOLS]
+    # ... similarly for permission settings
+```
+
+**Key insight**: Hooks compose. You can use multiple hooks together - their `TOOLS` lists concatenate and their permission sets merge with `|=`.
+
 ## Exercises
 
 - **Add conversation history**: Save/load `self.messages` to JSON to resume conversations.
