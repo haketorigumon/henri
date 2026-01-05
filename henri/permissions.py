@@ -61,7 +61,7 @@ class PermissionManager:
     def _is_path_within_cwd(self, path: str) -> bool:
         """Check if a path is within the current working directory."""
         try:
-            resolved = Path(path).resolve()
+            resolved = Path(path).expanduser().resolve()
             cwd = Path.cwd().resolve()
             return resolved.is_relative_to(cwd)
         except (ValueError, OSError):
@@ -87,7 +87,7 @@ class PermissionManager:
         # For path-based tools
         elif self._is_path_based(tool.name):
             path = call.args.get("path", ".")
-            resolved = str(Path(path).resolve())
+            resolved = str(Path(path).expanduser().resolve())
             # Check if path already allowed for this tool
             if resolved in self.allowed_paths.get(tool.name, set()):
                 return True
@@ -139,7 +139,7 @@ class PermissionManager:
                     self.console.print(f"[dim]Will allow this exact bash command for this session[/dim]")
                 elif self._is_path_based(tool.name):
                     path = call.args.get("path", ".")
-                    resolved = str(Path(path).resolve())
+                    resolved = str(Path(path).expanduser().resolve())
                     if tool.name not in self.allowed_paths:
                         self.allowed_paths[tool.name] = set()
                     self.allowed_paths[tool.name].add(resolved)
