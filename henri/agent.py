@@ -207,36 +207,29 @@ class Agent:
             # Add results and continue the loop
             self.messages.append(Message.tool_result(results))
 
+    def _truncate(self, text: str, limit: int = 10) -> str:
+        """Truncate multi-line text, returning (display, was_truncated)."""
+        lines = text.split("\n")
+        if len(lines) > limit:
+            return "\n".join(lines[:limit]) + f"\n... ({len(lines) - limit} more lines)"
+        return text
+
     def _show_tool_execution(self, tool: Tool, call) -> None:
         """Display that a tool is being executed."""
-        # Build header with simple args
-        simple_args = []
-        multi_args = {}
+        inline, panels = [], []
         for k, v in call.args.items():
             if isinstance(v, str) and "\n" in v:
-                multi_args[k] = v
+                panels.append((k, v))
             else:
-                v_repr = repr(v)
-                if len(v_repr) > 60:
-                    v_repr = v_repr[:60] + "..."
-                simple_args.append(f"{k}={v_repr}")
+                r = repr(v)
+                inline.append(f"{k}={r[:60]}..." if len(r) > 60 else f"{k}={r}")
 
-        header = f"▶ {tool.name}({', '.join(simple_args)})"
-        self.console.print(f"\n[dim]{header}[/dim]")
-
-        # Show multi-line args in panels
-        for k, v in multi_args.items():
-            lines = v.split("\n")
-            if len(lines) > 10:
-                display = "\n".join(lines[:10]) + f"\n[dim]... ({len(lines) - 10} more lines)[/dim]"
-            else:
-                display = v
+        self.console.print(f"\n[dim]▶ {tool.name}({', '.join(inline)})[/dim]")
+        for name, content in panels:
             self.console.print(Panel(
-                rich_escape(display),
-                title=f"[dim]{k}[/dim]",
-                title_align="left",
-                border_style="dim",
-                padding=(0, 1),
+                rich_escape(self._truncate(content)),
+                title=f"[dim]{name}[/dim]", title_align="left",
+                border_style="dim", padding=(0, 1),
             ))
 
     def _show_tool_result(self, result: str) -> None:
