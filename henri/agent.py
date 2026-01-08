@@ -169,6 +169,8 @@ class Agent:
 
                 if event.tool_use_started or event.tool_calls:
                     self._cancel_pondering()
+                    self._hide_status()
+                    self.console.print()  # newline so status doesn't overwrite text
                     if event.tool_calls:
                         tool_calls = event.tool_calls
                     self._show_status("Working...")
