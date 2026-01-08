@@ -1,6 +1,7 @@
 """Main agent loop for Henri."""
 
 import asyncio
+import os
 import sys
 
 from prompt_toolkit import PromptSession
@@ -364,7 +365,7 @@ async def run_agent(
 
     # Use prompt_toolkit only for interactive terminals
     interactive = sys.stdin.isatty()
-    session = PromptSession(history=FileHistory(".henri_history")) if interactive else None
+    session = PromptSession(history=FileHistory(os.path.expanduser("~/.henri_history"))) if interactive else None
 
     while True:
         try:
