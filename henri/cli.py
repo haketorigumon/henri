@@ -24,9 +24,11 @@ def load_hook(hook_path: str):
     if not path.exists():
         raise FileNotFoundError(f"Hook file not found: {hook_path}")
 
-    spec = importlib.util.spec_from_file_location("hook", path)
+    # Use unique module name based on file path to avoid collisions
+    module_name = f"hook_{path.stem}_{id(path)}"
+    spec = importlib.util.spec_from_file_location(module_name, path)
     module = importlib.util.module_from_spec(spec)
-    sys.modules["hook"] = module
+    sys.modules[module_name] = module
     spec.loader.exec_module(module)
     return module
 
@@ -56,8 +58,8 @@ def main():
     )
     parser.add_argument(
         "--hook",
-        nargs="*",
-        help="Path(s) to Python hook file(s) (defines TOOLS, PATH_BASED, etc.)",
+        action="append",
+        help="Path to a Python hook file (can be used multiple times)",
     )
     parser.add_argument(
         "--max-turns",
