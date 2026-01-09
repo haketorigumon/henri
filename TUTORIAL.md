@@ -534,11 +534,21 @@ for hook in hooks:
 
 - **Add conversation history**: Save/load `self.messages` to JSON to resume conversations.
 
-- **Add file pattern permissions**: Instead of per-tool, allow "write to *.py files" patterns.
-
 - **Add a new provider**: Try adding OpenAI, Anthropic direct API, or another LLM service.
 
+- **Add file pattern permissions**: Instead of per-tool, allow "write to *.py files" patterns.
+
 - **Add streaming tool output**: For long-running bash commands, stream output as it happens.
+
+- **Compare models**: Run the same task across different providers/models and compare results. Which is faster? More accurate? More verbose?
+
+- **Add a TODO system**: Inject a `<todo-list>` into the system prompt that the agent maintains. This helps prevent the agent from stopping prematurely or forgetting subtasks. See how it affects task completion rates.
+
+- **Add context management**: When conversations get long, the context window fills up. Implement summarization of old messages, or a sliding window that keeps recent messages plus a summary of earlier context.
+
+- **Add retry with backoff**: When a tool fails (e.g., network error, rate limit), retry with exponential backoff instead of immediately returning the error to the LLM.
+
+- **Add self-verification**: After the agent says it's done, automatically run verification (tests, linter, type checker) and feed failures back to continue the loop. Compare completion rates with and without this.
 
 ## Further Reading
 
