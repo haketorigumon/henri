@@ -8,7 +8,7 @@ Henri is a minimal but complete AI coding assistant that demonstrates the core a
 
 - **Multiple LLM providers** - AWS Bedrock, Google Gemini, Vertex AI, Ollama (local)
 - **Streaming responses** - Real-time token streaming
-- **Tool system** - bash, file read/write capabilities
+- **Tool system** - bash, file read/write/edit capabilities
 - **Permission management** - Prompts before potentially dangerous operations
 - **Clean architecture** - Easy to understand and extend
 
