@@ -550,8 +550,3 @@ for hook in hooks:
 
 - **Add self-verification**: After the agent says it's done, automatically run verification (tests, linter, type checker) and feed failures back to continue the loop. Compare completion rates with and without this.
 
-## Further Reading
-
-- [Anthropic Tool Use Documentation](https://docs.anthropic.com/en/docs/build-with-claude/tool-use)
-- [AWS Bedrock Converse API](https://docs.aws.amazon.com/bedrock/latest/userguide/conversation-inference.html)
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) - The production version of this pattern
