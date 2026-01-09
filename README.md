@@ -1,8 +1,8 @@
 # Henri
 
-A small, hackable agent runtime in Python (streaming + tools + permissions + hooks) with multi-provider support — plus [a tutorial](TUTORIAL.md) — inspired by Claude Code.
-
-Henri is a minimal but complete AI coding assistant that demonstrates the core architecture of tools like Claude Code: streaming LLM responses, tool execution, and permission management.
+Henri is a small, hackable agent CLI in Python, with explicit control via tools, permissions, and hooks.
+It comes with [a tutorial](TUTORIAL.md)
+and is inspired by Claude Code.
 
 ## Features
 
