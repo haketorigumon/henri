@@ -1,6 +1,6 @@
 # Henri
 
-A [pedagogical](TUTORIAL.md) Claude Code clone built in Python.
+A [pedagogical](TUTORIAL.md), small, hackable agent runtime in Python (streaming + tools + permissions + hooks) with multi-provider support — plus a tutorial — inspired by Claude Code.
 
 Henri is a minimal but complete AI coding assistant that demonstrates the core architecture of tools like Claude Code: streaming LLM responses, tool execution, and permission management.
 
