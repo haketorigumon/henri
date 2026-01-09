@@ -8,7 +8,7 @@ and is inspired by Claude Code.
 
 - **Multiple LLM providers** - AWS Bedrock, Google Gemini, Vertex AI, Ollama (local)
 - **Streaming responses** - Real-time token streaming
-- **Tool system** - bash, file read/write/edit capabilities
+- **Tool system** - bash, file read/write/edit capabilities, grep/grop, ...
 - **Permission management** - Prompts before potentially dangerous operations
 - **Hook system** - Add custom tools and configure permissions via `--hook`
 - **Clean architecture** - Easy to understand and extend
