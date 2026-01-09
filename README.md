@@ -10,6 +10,7 @@ Henri is a minimal but complete AI coding assistant that demonstrates the core a
 - **Streaming responses** - Real-time token streaming
 - **Tool system** - bash, file read/write/edit capabilities
 - **Permission management** - Prompts before potentially dangerous operations
+- **Hook system** - Add custom tools and configure permissions via `--hook`
 - **Clean architecture** - Easy to understand and extend
 
 ## Installation
@@ -160,9 +161,24 @@ henri --host http://localhost:11434  # Ollama
 
 # Limit turns (for benchmarking)
 henri --max-turns 10                 # Stop after 10 turns (default: unlimited)
+
+# Load hooks (can be used multiple times)
+henri --hook hooks/dafny.py          # Add dafny_verify tool
+henri --hook hooks/dafny.py --hook hooks/bench.py  # Combine hooks
 ```
 
 On exit, Henri prints metrics: `Turns: X | Tokens: Y in, Z out`
+
+### Hooks
+
+Hooks are Python files that customize Henri without modifying core code. They can:
+
+- Add custom tools (`TOOLS = [MyTool()]`)
+- Remove tools (`REMOVE_TOOLS = {"bash"}`)
+- Configure auto-allow permissions (`AUTO_ALLOW_CWD = {"my_tool"}`)
+- Reject permission prompts for automation (`REJECT_PROMPTS = True`)
+
+See `hooks/` for examples and the [tutorial](TUTORIAL.md#part-8-hooks) for details.
 
 ### Links
 
