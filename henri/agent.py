@@ -139,12 +139,12 @@ class Agent:
         self.messages.append(Message.user(user_input))
 
         while True:
-            self.turns += 1
-
-            # Check max turns
-            if self.max_turns and self.turns > self.max_turns:
+            # Check max turns before starting a new turn
+            if self.max_turns and self.turns >= self.max_turns:
                 self.console.print(f"\n[yellow]Max turns ({self.max_turns}) reached.[/yellow]")
                 return False
+
+            self.turns += 1
 
             # Stream response from LLM
             response_text = ""
