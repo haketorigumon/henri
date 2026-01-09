@@ -180,6 +180,12 @@ Hooks are Python files that customize Henri without modifying core code. They ca
 
 See `hooks/` for examples and the [tutorial](TUTORIAL.md#part-8-hooks) for details.
 
+### Used in
+
+- [Dafny Sketcher](https://github.com/namin/dafny-sketcher)
+  - [henri.py](https://github.com/namin/dafny-sketcher/blob/main/vfp/henri.py) - Hook adding `dafny_sketcher` tool
+  - [henri_bench.py](https://github.com/namin/dafny-sketcher/blob/main/vfp/henri_bench.py) - Benchmark harness for evaluating proof synthesis
+
 ### Links
 
 - [Supported AWS Bedrock models](https://docs.aws.amazon.com/bedrock/latest/userguide/inference-profiles-support.html)
