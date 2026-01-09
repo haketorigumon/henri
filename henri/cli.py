@@ -67,6 +67,12 @@ def main():
         default=None,
         help="Maximum conversation turns (default: unlimited)",
     )
+    parser.add_argument(
+        "--stats-file",
+        type=str,
+        default=None,
+        help="Path to write JSON stats (turns, tokens) after completion",
+    )
     args = parser.parse_args()
 
     # Determine model based on provider if not specified
@@ -91,6 +97,7 @@ def main():
         host=args.host,
         hooks=hooks,
         max_turns=args.max_turns,
+        stats_file=args.stats_file,
     ))
 
 

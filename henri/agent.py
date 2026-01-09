@@ -288,6 +288,7 @@ async def run_agent(
     host: str | None = None,
     hooks: list | None = None,
     max_turns: int | None = None,
+    stats_file: str | None = None,
 ):
     """Run the interactive agent loop."""
     console = Console()
@@ -389,3 +390,14 @@ async def run_agent(
 
     # Print metrics
     console.print(f"\n[dim]Turns: {agent.turns} | Tokens: {agent.input_tokens} in, {agent.output_tokens} out[/dim]")
+
+    # Write stats to file if requested
+    if stats_file:
+        import json
+        stats = {
+            "turns": agent.turns,
+            "input_tokens": agent.input_tokens,
+            "output_tokens": agent.output_tokens,
+        }
+        with open(stats_file, "w") as f:
+            json.dump(stats, f)
