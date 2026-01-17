@@ -73,9 +73,9 @@ There are 5 files in the current directory...
 
 When Henri wants to execute a tool that requires permission (like `bash` or `write_file`), you'll be prompted:
 
-- `y` - Allow this specific execution
+- `y` - Allow this execution
 - `n` - Deny this execution
-- `a` - Always allow this tool for the session
+- `a` - Always allow (scope depends on tool: exact command for bash, per-path for file tools)
 - `A` - Allow all tools for the session
 
 ## Architecture
