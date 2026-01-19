@@ -6,7 +6,7 @@ and is inspired by Claude Code.
 
 ## Features
 
-- **Multiple LLM providers** - AWS Bedrock, Google Gemini, Vertex AI, Ollama (local)
+- **Multiple LLM providers** - AWS Bedrock, Google Gemini, Vertex AI, Ollama, OpenAI-compatible (VLLM, etc.)
 - **Streaming responses** - Real-time token streaming
 - **Tool system** - bash, file read/write/edit capabilities, grep/glob, ...
 - **Permission management** - Prompt or auto-deny operations
@@ -32,8 +32,11 @@ henri --provider google
 # Vertex AI
 henri --provider vertex
 
-# Ollama (local)
+# Ollama
 henri --provider ollama
+
+# OpenAI-compatible server (VLLM, etc.)
+henri --provider openai_compatible --model <model-name> --host <server-url>
 ```
 
 ### Provider Setup
