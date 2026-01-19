@@ -106,9 +106,10 @@ class OpenAICompatibleProvider(Provider):
         # Track tool calls being built across chunks
         tool_call_builders: dict[int, dict] = {}
         usage = None
+        final_finish_reason = None
 
         async for chunk in response:
-            # Handle usage in final chunk
+            # Handle usage (comes in final chunk with empty choices)
             if chunk.usage:
                 usage = Usage(
                     input_tokens=chunk.usage.prompt_tokens,
@@ -147,24 +148,28 @@ class OpenAICompatibleProvider(Provider):
                         if tc_delta.function.arguments:
                             builder["arguments"] += tc_delta.function.arguments
 
-            # Handle finish
+            # Track finish reason but don't yield yet (usage comes in next chunk)
             if finish_reason:
-                tool_calls = []
-                for idx in sorted(tool_call_builders.keys()):
-                    builder = tool_call_builders[idx]
-                    try:
-                        args = json.loads(builder["arguments"]) if builder["arguments"] else {}
-                    except json.JSONDecodeError:
-                        args = {}
-                    tool_calls.append(ToolCall(
-                        id=builder["id"],
-                        name=builder["name"],
-                        args=args,
-                    ))
+                final_finish_reason = finish_reason
 
-                stop_reason = "tool_use" if finish_reason == "tool_calls" else "end_turn"
-                yield StreamEvent(
-                    tool_calls=tool_calls if tool_calls else None,
-                    stop_reason=stop_reason,
-                    usage=usage,
-                )
+        # After stream ends, yield final event with usage
+        if final_finish_reason:
+            tool_calls = []
+            for idx in sorted(tool_call_builders.keys()):
+                builder = tool_call_builders[idx]
+                try:
+                    args = json.loads(builder["arguments"]) if builder["arguments"] else {}
+                except json.JSONDecodeError:
+                    args = {}
+                tool_calls.append(ToolCall(
+                    id=builder["id"],
+                    name=builder["name"],
+                    args=args,
+                ))
+
+            stop_reason = "tool_use" if final_finish_reason == "tool_calls" else "end_turn"
+            yield StreamEvent(
+                tool_calls=tool_calls if tool_calls else None,
+                stop_reason=stop_reason,
+                usage=usage,
+            )
