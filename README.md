@@ -56,6 +56,10 @@ henri --provider openai_compatible --model <model-name> --host <server-url>
 - Install and run [Ollama](https://ollama.ai) locally
 - Pull a model: `ollama pull qwen3-coder:30b`
 
+**OpenAI-compatible server**
+- Start an OpenAI-compatible server with tool calling, e.g.,: `vllm serve $MODEL_PATH --dtype auto --max_model_len 4096 --served-model-name $MODEL_NAME --tool-call-parser $MODEL_TOOL_CALL_PARSER --enable-auto-tool-choice`
+
+
 ### Example Session
 
 ```
