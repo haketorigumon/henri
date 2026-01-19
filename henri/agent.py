@@ -301,6 +301,8 @@ async def run_agent(
         provider_kwargs["region"] = region
     elif provider == "ollama" and host:
         provider_kwargs["host"] = host
+    elif provider == "openai_compatible" and host:
+        provider_kwargs["host"] = host
 
     llm = create_provider(provider, **provider_kwargs)
 

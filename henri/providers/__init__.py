@@ -6,6 +6,7 @@ from .base import Provider, StreamEvent
 from .bedrock import BedrockProvider
 from .google import GoogleProvider
 from .ollama import OllamaProvider
+from .openai_compatible import OpenAICompatibleProvider
 from .vertex import VertexProvider
 
 # Registry of available providers
@@ -13,6 +14,7 @@ PROVIDERS: dict[str, type[Provider]] = {
     "bedrock": BedrockProvider,
     "google": GoogleProvider,
     "ollama": OllamaProvider,
+    "openai_compatible": OpenAICompatibleProvider,
     "vertex": VertexProvider,
 }
 
@@ -43,6 +45,7 @@ __all__ = [
     "BedrockProvider",
     "GoogleProvider",
     "OllamaProvider",
+    "OpenAICompatibleProvider",
     "VertexProvider",
     "PROVIDERS",
     "create_provider",

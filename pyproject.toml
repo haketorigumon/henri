@@ -12,6 +12,7 @@ dependencies = [
     "boto3>=1.34.0",              # AWS SDK for Bedrock
     "google-genai>=1.0.0",        # Google Gemini API
     "ollama>=0.4.0",              # Ollama local models
+    "openai>=1.0.0",              # OpenAI-compatible servers (VLLM, etc.)
     "prompt-toolkit>=3.0.0",      # Readline-style input
     "rich>=13.0.0",               # Terminal formatting
     "beautifulsoup4>=4.12.0",     # HTML parsing

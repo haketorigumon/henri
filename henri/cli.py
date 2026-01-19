@@ -53,8 +53,7 @@ def main():
     )
     parser.add_argument(
         "--host",
-        default=DEFAULT_OLLAMA_HOST,
-        help="Host URL for Ollama provider",
+        help="Host URL for Ollama or OpenAI-compatible providers",
     )
     parser.add_argument(
         "--hook",
@@ -74,6 +73,17 @@ def main():
         help="Path to write JSON stats (turns, tokens) after completion",
     )
     args = parser.parse_args()
+
+    # Validate openai_compatible provider requirements
+    if args.provider == "openai_compatible":
+        if args.model is None:
+            parser.error("--model is required for openai_compatible provider")
+        if args.host is None:
+            parser.error("--host is required for openai_compatible provider")
+
+    # Apply default host for ollama if not specified
+    if args.provider == "ollama" and args.host is None:
+        args.host = DEFAULT_OLLAMA_HOST
 
     # Determine model based on provider if not specified
     if args.model is None:
